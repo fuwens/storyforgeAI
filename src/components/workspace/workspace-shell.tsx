@@ -137,11 +137,44 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ format }),
     });
+    if (!response.ok) {
+      setLoadingAction(null);
+      return;
+    }
+    const payload = await response.json();
+
+    // ZIP is async — poll for completion
+    if (format === "zip" && payload.jobId) {
+      const jobId = payload.jobId as string;
+      const poll = setInterval(async () => {
+        try {
+          const jobRes = await fetch(`/api/jobs/${jobId}`);
+          if (!jobRes.ok) return;
+          const job = await jobRes.json();
+          if (job.status === "completed" && job.result?.downloadUrl) {
+            clearInterval(poll);
+            setLoadingAction(null);
+            setExportLinks((current) => ({ ...current, zip: job.result.downloadUrl as string }));
+            window.open(job.result.downloadUrl as string, "_blank");
+            await refreshProject(false);
+          } else if (job.status === "failed") {
+            clearInterval(poll);
+            setLoadingAction(null);
+            alert(`导出失败: ${job.error || "未知错误"}`);
+          }
+        } catch {
+          // ignore transient fetch errors
+        }
+      }, 3000);
+      return;
+    }
+
+    // CSV/TXT — synchronous, same as before
     setLoadingAction(null);
-    if (!response.ok) return;
-    const payload = (await response.json()) as { downloadUrl: string; project: Project };
-    setProject(payload.project);
-    setExportLinks((current) => ({ ...current, [format]: payload.downloadUrl }));
+    if (payload.downloadUrl) {
+      setProject(payload.project as Project);
+      setExportLinks((current) => ({ ...current, [format]: payload.downloadUrl as string }));
+    }
   }
 
   // 步骤配置
@@ -514,7 +547,9 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
                       onClick={() => handleExport(format)}
                       disabled={!!loadingAction}
                     >
-                      {loadingAction === `export-${format}` ? "导出中..." : `导出 ${format.toUpperCase()}`}
+                      {loadingAction === `export-${format}`
+                        ? (format === "zip" ? "打包中，请稍候..." : "导出中...")
+                        : `导出 ${format.toUpperCase()}`}
                     </button>
                   ))}
                 </div>

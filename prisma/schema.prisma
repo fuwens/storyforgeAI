@@ -138,3 +138,14 @@ model ExportJob {
   projectId   String
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
+
+model Job {
+  id        String   @id
+  type      String
+  status    String   @default("pending")
+  payload   Json
+  result    Json?
+  error     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

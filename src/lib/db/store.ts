@@ -476,3 +476,39 @@ export async function getProjectByTask(taskId: string) {
   if (!task) return null;
   return getProject(task.shot.projectId);
 }
+
+/* ---------- Job Queue CRUD ---------- */
+
+export async function createJob(job: {
+  id: string;
+  type: string;
+  status?: string;
+  payload: Record<string, unknown>;
+}) {
+  return prisma.job.create({
+    data: {
+      id: job.id,
+      type: job.type,
+      status: job.status ?? "pending",
+      payload: job.payload as Prisma.InputJsonValue,
+    },
+  });
+}
+
+export async function updateJob(
+  id: string,
+  data: { status?: string; result?: Record<string, unknown>; error?: string },
+) {
+  return prisma.job.update({
+    where: { id },
+    data: {
+      status: data.status,
+      result: data.result ? (data.result as Prisma.InputJsonValue) : undefined,
+      error: data.error,
+    },
+  });
+}
+
+export async function getJob(id: string) {
+  return prisma.job.findUnique({ where: { id } });
+}
