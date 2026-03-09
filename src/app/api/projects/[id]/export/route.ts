@@ -98,6 +98,12 @@ function getActivePrompt(shot: Shot) {
 async function fetchMediaBuffer(url: string): Promise<Buffer | null> {
   if (!url) return null;
   try {
+    // Local path (storageUrl like "/generated/xxx.mp4") — read from disk
+    if (url.startsWith("/")) {
+      const localPath = path.join(process.cwd(), "public", url);
+      return await fs.readFile(localPath);
+    }
+    // Remote URL — fetch over HTTP
     const res = await fetch(url, { signal: AbortSignal.timeout(60_000) });
     if (!res.ok) return null;
     const arrayBuf = await res.arrayBuffer();
