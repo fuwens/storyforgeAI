@@ -113,6 +113,8 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
     }));
   }
 
+  const [retryingTaskId, setRetryingTaskId] = useState<string | null>(null);
+
   async function handleApprove(assetId: string) {
     const response = await fetch(`/api/assets/${assetId}/approve`, { method: "PUT" });
     if (!response.ok) return;
@@ -121,7 +123,9 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
   }
 
   async function handleRetry(taskId: string) {
+    setRetryingTaskId(taskId);
     const response = await fetch(`/api/tasks/${taskId}/retry`, { method: "POST" });
+    setRetryingTaskId(null);
     if (!response.ok) return;
     await refreshProject(true);
   }
@@ -479,9 +483,10 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
                       {isFailed && latestTask && (
                         <button
                           onClick={() => handleRetry(latestTask.id)}
-                          className="rounded-full border border-rose-400/30 px-3 py-1 text-xs text-rose-200 hover:bg-rose-400/10"
+                          disabled={retryingTaskId === latestTask.id}
+                          className="rounded-full border border-rose-400/30 px-3 py-1 text-xs text-rose-200 hover:bg-rose-400/10 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          重试
+                          {retryingTaskId === latestTask.id ? "重试中..." : "重试"}
                         </button>
                       )}
                     </div>
@@ -527,6 +532,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
                   shot={shot}
                   onApprove={handleApprove}
                   onRetry={handleRetry}
+                  retryingTaskId={retryingTaskId}
                   onPromptUpdated={() => refreshProject(false)}
                 />
               ))}

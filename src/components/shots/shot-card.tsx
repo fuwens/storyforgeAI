@@ -9,10 +9,11 @@ type ShotCardProps = {
   shot: Shot;
   onApprove: (assetId: string) => void;
   onRetry: (taskId: string) => void;
+  retryingTaskId?: string | null;
   onPromptUpdated?: () => void;
 };
 
-export function ShotCard({ shot, onApprove, onRetry, onPromptUpdated }: ShotCardProps) {
+export function ShotCard({ shot, onApprove, onRetry, retryingTaskId, onPromptUpdated }: ShotCardProps) {
   const latestTask = shot.tasks[0];
   const approvedAsset = shot.assets.find((asset) => asset.approved);
   const activePrompt = shot.promptVariants[0];
@@ -187,8 +188,12 @@ export function ShotCard({ shot, onApprove, onRetry, onPromptUpdated }: ShotCard
       {latestTask?.status === "failed" ? (
         <div className="mt-4 flex items-center justify-between rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
           <span>{latestTask.errorMessage || "任务失败"}</span>
-          <button className="rounded-full border border-white/10 px-3 py-1.5" onClick={() => onRetry(latestTask.id)}>
-            重试
+          <button
+            className="rounded-full border border-white/10 px-3 py-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={retryingTaskId === latestTask.id}
+            onClick={() => onRetry(latestTask.id)}
+          >
+            {retryingTaskId === latestTask.id ? "重试中..." : "重试"}
           </button>
         </div>
       ) : null}
