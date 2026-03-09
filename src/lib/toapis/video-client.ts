@@ -73,10 +73,13 @@ function buildPayload(input: {
   }
 
   if (input.model.startsWith("kling")) {
+    // Kling 只支持 5s 和 10s，取最近合法值
+    const rawDuration = input.duration || 5;
+    const klingDuration = rawDuration <= 7 ? 5 : 10;
     return {
       model: input.model,
       prompt: input.prompt,
-      duration: input.duration || 5,
+      duration: klingDuration,
       aspect_ratio: input.aspectRatio || "16:9",
       mode: input.modelConfig?.mode || "std",
       audio: Boolean(input.modelConfig?.audio),

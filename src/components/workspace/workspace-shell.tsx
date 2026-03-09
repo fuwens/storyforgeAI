@@ -425,14 +425,14 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
                   <p className="text-xs text-slate-500">生成中</p>
-                  <p className="mt-2 text-3xl font-semibold text-white">
+                  <p className="mt-2 text-3xl font-semibold text-amber-300">
                     {project.shots.reduce((sum, shot) =>
                       sum + shot.tasks.filter((t) => t.status === "queued" || t.status === "in_progress").length, 0)}
                   </p>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
                   <p className="text-xs text-slate-500">已完成素材</p>
-                  <p className="mt-2 text-3xl font-semibold text-white">
+                  <p className="mt-2 text-3xl font-semibold text-emerald-300">
                     {project.shots.reduce((sum, shot) => sum + shot.assets.length, 0)}
                   </p>
                 </div>
@@ -443,6 +443,51 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
               {hasAssets && !hasActiveTasks && (
                 <p className="mt-4 text-xs text-emerald-400">✅ 生成完成，前往下一步审核素材</p>
               )}
+            </div>
+
+            {/* 每个镜头任务状态 + 失败重试 */}
+            <div className="space-y-3">
+              {project.shots.map((shot) => {
+                const latestTask = shot.tasks[0];
+                const hasAsset = shot.assets.length > 0;
+                const isFailed = latestTask?.status === "failed";
+                const isRunning = latestTask?.status === "queued" || latestTask?.status === "in_progress";
+                return (
+                  <div key={shot.id} className={[
+                    "flex items-center justify-between gap-4 rounded-2xl border px-4 py-3",
+                    isFailed ? "border-rose-400/20 bg-rose-400/5" :
+                    hasAsset ? "border-emerald-400/20 bg-emerald-400/5" :
+                    isRunning ? "border-indigo-400/20 bg-indigo-400/5" :
+                    "border-white/10 bg-white/5"
+                  ].join(" ")}>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-white truncate">Shot {shot.sequence} · {shot.title}</p>
+                      {isFailed && (
+                        <p className="mt-0.5 text-xs text-rose-300">{latestTask.errorMessage || "生成失败"}</p>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span className={[
+                        "rounded-full px-2 py-1 text-xs font-medium",
+                        isFailed ? "bg-rose-400/20 text-rose-300" :
+                        hasAsset ? "bg-emerald-400/20 text-emerald-300" :
+                        isRunning ? "bg-indigo-400/20 text-indigo-300" :
+                        "bg-white/10 text-slate-400"
+                      ].join(" ")}>
+                        {isFailed ? "失败" : hasAsset ? "✓ 完成" : isRunning ? "生成中..." : "待生成"}
+                      </span>
+                      {isFailed && latestTask && (
+                        <button
+                          onClick={() => handleRetry(latestTask.id)}
+                          className="rounded-full border border-rose-400/30 px-3 py-1 text-xs text-rose-200 hover:bg-rose-400/10"
+                        >
+                          重试
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         );
