@@ -75,14 +75,17 @@ function getLatestScript(project: FullProject) {
   );
 }
 
-function getShotAssetUrl(shot: Shot): string {
+function getShotAsset(shot: Shot) {
   const approved = shot.assets.find((a) => a.approved);
-  if (approved) return approved.storageUrl || approved.sourceUrl;
-  if (shot.assets.length > 0) {
-    const latest = shot.assets[shot.assets.length - 1];
-    return latest.storageUrl || latest.sourceUrl;
-  }
-  return "";
+  if (approved) return approved;
+  if (shot.assets.length > 0) return shot.assets[shot.assets.length - 1];
+  return null;
+}
+
+function getShotAssetUrl(shot: Shot): string {
+  const asset = getShotAsset(shot);
+  if (!asset) return "";
+  return asset.storageUrl || asset.sourceUrl;
 }
 
 function getActivePrompt(shot: Shot) {
@@ -90,12 +93,42 @@ function getActivePrompt(shot: Shot) {
   return active || shot.promptVariants[0] || null;
 }
 
-/* ---------- ZIP ---------- */
+/* ---------- ZIP (downloads actual media files) ---------- */
+
+async function fetchMediaBuffer(url: string): Promise<Buffer | null> {
+  if (!url) return null;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(60_000) });
+    if (!res.ok) return null;
+    const arrayBuf = await res.arrayBuffer();
+    return Buffer.from(arrayBuf);
+  } catch {
+    return null;
+  }
+}
+
+function guessExtension(url: string, mimeType?: string): string {
+  if (mimeType) {
+    if (mimeType.startsWith("video/mp4")) return ".mp4";
+    if (mimeType.startsWith("video/")) return ".mp4";
+    if (mimeType.startsWith("image/png")) return ".png";
+    if (mimeType.startsWith("image/webp")) return ".webp";
+    if (mimeType.startsWith("image/jpeg")) return ".jpg";
+    if (mimeType.startsWith("image/")) return ".jpg";
+  }
+  // guess from URL
+  const ext = url.split("?")[0].split(".").pop()?.toLowerCase();
+  if (ext && ["mp4", "webm", "png", "jpg", "jpeg", "webp", "gif"].includes(ext)) {
+    return `.${ext}`;
+  }
+  return ".bin";
+}
 
 async function buildZip(project: FullProject) {
   const zip = new JSZip();
   const latestScript = getLatestScript(project);
 
+  // manifest.json
   const manifest: Record<string, unknown> = {
     project: {
       title: project.title,
@@ -106,13 +139,7 @@ async function buildZip(project: FullProject) {
     script: latestScript?.content || "",
     shots: project.shots.map((shot) => {
       const prompt = getActivePrompt(shot);
-      const approved = shot.assets.find((a) => a.approved);
-      const latestAsset =
-        shot.assets.length > 0
-          ? shot.assets[shot.assets.length - 1]
-          : null;
-      const asset = approved || latestAsset;
-
+      const asset = getShotAsset(shot);
       return {
         sequence: shot.sequence,
         title: shot.title,
@@ -132,32 +159,46 @@ async function buildZip(project: FullProject) {
           ? {
               sourceUrl: asset.sourceUrl,
               storageUrl: asset.storageUrl || null,
+              approved: asset.approved,
             }
           : null,
       };
     }),
   };
-
   zip.file("manifest.json", JSON.stringify(manifest, null, 2));
 
+  // Download each shot's media file and add to zip
+  const mediaFolder = zip.folder("media")!;
   const urlLines: string[] = [];
-  for (const shot of project.shots) {
-    const url = getShotAssetUrl(shot);
-    urlLines.push(`Shot ${shot.sequence}: ${shot.title}`);
-    urlLines.push(`  Image/Video URL: ${url || "(none)"}`);
-    urlLines.push("");
-  }
-  zip.file("urls.txt", urlLines.join("\n"));
 
-  return zip.generateAsync({ type: "nodebuffer" });
+  await Promise.allSettled(
+    project.shots.map(async (shot) => {
+      const asset = getShotAsset(shot);
+      const url = asset ? (asset.storageUrl || asset.sourceUrl) : "";
+      const seqLabel = String(shot.sequence).padStart(2, "0");
+
+      urlLines[shot.sequence - 1] =
+        `Shot ${shot.sequence}: ${shot.title}\n  URL: ${url || "(none)"}`;
+
+      if (!url) return;
+
+      const buf = await fetchMediaBuffer(url);
+      if (!buf) return;
+
+      const ext = guessExtension(url, asset?.mimeType);
+      const fileName = `shot-${seqLabel}-${shot.title.replace(/[^\w\u4e00-\u9fa5]/g, "_")}${ext}`;
+      mediaFolder.file(fileName, buf);
+    }),
+  );
+
+  zip.file("urls.txt", urlLines.filter(Boolean).join("\n\n"));
+
+  return zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE", compressionOptions: { level: 3 } });
 }
 
 /* ---------- CSV ---------- */
 
 function buildCsv(project: FullProject) {
-  const latestScript = getLatestScript(project);
-  const scriptContent = latestScript?.content || "";
-
   const BOM = "\uFEFF";
   const header = [
     "Shot序号",
@@ -192,7 +233,6 @@ function buildCsv(project: FullProject) {
     );
   }
 
-  // scriptContent is available in manifest/txt; CSV focuses on shot-level data
   return BOM + rows.join("\n");
 }
 
@@ -206,5 +246,5 @@ function buildTxt(project: FullProject) {
 /* ---------- util ---------- */
 
 function csvEscape(value: string) {
-  return `"${value.replaceAll('"', '""')}"`;
+  return `"${(value ?? "").replaceAll('"', '""')}"`;
 }
