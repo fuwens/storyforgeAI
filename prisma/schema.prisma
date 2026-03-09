@@ -1,0 +1,140 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProjectStatus {
+  draft
+  generating
+  completed
+  archived
+}
+
+enum TaskStatus {
+  queued
+  in_progress
+  completed
+  failed
+}
+
+enum MediaType {
+  image
+  video
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  projects   Project[]
+}
+
+model Project {
+  id             String          @id @default(cuid())
+  title          String
+  topic          String
+  targetDuration String
+  language       String
+  platform       String
+  presetKey      String?
+  styleTags      String[]
+  status         ProjectStatus   @default(draft)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  userId         String?
+  user           User?           @relation(fields: [userId], references: [id])
+  scriptVersions ScriptVersion[]
+  shots          Shot[]
+  exportJobs     ExportJob[]
+}
+
+model ScriptVersion {
+  id        String   @id @default(cuid())
+  content   String
+  version   Int
+  createdAt DateTime @default(now())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Shot {
+  id                  String           @id @default(cuid())
+  sequence            Int
+  title               String?
+  narration           String
+  sceneDescription    String
+  emotion             String
+  shotType            String
+  durationSeconds     Int
+  generationType      MediaType        @default(image)
+  model               String?
+  aspectRatio         String?
+  modelConfig         Json?
+  approvedAssetId     String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  projectId           String
+  project             Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  promptVariants      PromptVariant[]
+  generationTasks     GenerationTask[]
+  assets              Asset[]
+}
+
+model PromptVariant {
+  id             String   @id @default(cuid())
+  imagePrompt    String
+  videoPrompt    String
+  negativePrompt String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  shotId         String
+  shot           Shot     @relation(fields: [shotId], references: [id], onDelete: Cascade)
+}
+
+model GenerationTask {
+  id             String     @id @default(cuid())
+  provider       String
+  providerTaskId String
+  mediaType      MediaType
+  model          String
+  requestPayload Json
+  status         TaskStatus @default(queued)
+  errorMessage   String?
+  sourceUrl      String?
+  storageUrl     String?
+  expiresAt      DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  shotId         String
+  shot           Shot       @relation(fields: [shotId], references: [id], onDelete: Cascade)
+}
+
+model Asset {
+  id          String   @id @default(cuid())
+  sourceUrl   String
+  storageUrl  String?
+  mimeType    String
+  approved    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  shotId      String
+  shot        Shot     @relation(fields: [shotId], references: [id], onDelete: Cascade)
+}
+
+model ExportJob {
+  id          String   @id @default(cuid())
+  format      String
+  downloadUrl String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
