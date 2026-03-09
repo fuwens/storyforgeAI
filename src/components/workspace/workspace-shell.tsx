@@ -173,8 +173,18 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
     }
     const payload = await response.json();
 
-    // ZIP is async — poll for completion
-    if (format === "zip" && payload.jobId) {
+    // ZIP is async — poll for completion; or instant if cached
+    if (format === "zip") {
+      // Cache hit — file already exists, download immediately
+      if (payload.downloadUrl && !payload.jobId) {
+        setLoadingAction(null);
+        setExportLinks((current) => ({ ...current, zip: payload.downloadUrl as string }));
+        window.open(payload.downloadUrl as string, "_blank");
+        return;
+      }
+
+      if (!payload.jobId) { setLoadingAction(null); return; }
+
       const jobId = payload.jobId as string;
       const storageKey = `zip-job-${project.id}`;
       localStorage.setItem(storageKey, jobId);

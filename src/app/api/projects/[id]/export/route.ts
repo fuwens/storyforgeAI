@@ -53,6 +53,20 @@ export async function POST(
   }
 
   // ZIP → async via BullMQ
+  // Cache: if zip already exists for current project version, return directly
+  const timestamp = new Date(project.updatedAt).getTime();
+  const fileName = `${project.id}-${timestamp}-assets.zip`;
+  const fs = await import("node:fs/promises");
+  const path = await import("node:path");
+  const zipPath = path.join(process.cwd(), "public", "generated", fileName);
+  try {
+    await fs.access(zipPath);
+    // File exists — content unchanged, return cached download URL
+    return NextResponse.json({ downloadUrl: `/generated/${fileName}` });
+  } catch {
+    // File doesn't exist — need to build
+  }
+
   // Dedup: return existing job if one is already pending/active
   const existingJob = await getActiveJobByProject(project.id, "export_zip");
   if (existingJob) {
@@ -60,7 +74,6 @@ export async function POST(
   }
 
   const jobId = uid("job");
-  const fileName = `${project.id}-assets.zip`;
 
   await createJob({
     id: jobId,
