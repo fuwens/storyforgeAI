@@ -130,6 +130,36 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
     await refreshProject(true);
   }
 
+  // Restore in-progress ZIP export after page refresh
+  useEffect(() => {
+    const storageKey = `zip-job-${project.id}`;
+    const savedJobId = localStorage.getItem(storageKey);
+    if (!savedJobId) return;
+
+    setLoadingAction("export-zip");
+    const poll = setInterval(async () => {
+      try {
+        const jobRes = await fetch(`/api/jobs/${savedJobId}`);
+        if (!jobRes.ok) { clearInterval(poll); setLoadingAction(null); localStorage.removeItem(storageKey); return; }
+        const job = await jobRes.json();
+        if (job.status === "completed" && job.result?.downloadUrl) {
+          clearInterval(poll);
+          setLoadingAction(null);
+          localStorage.removeItem(storageKey);
+          setExportLinks((current) => ({ ...current, zip: job.result.downloadUrl as string }));
+          window.open(job.result.downloadUrl as string, "_blank");
+          await refreshProject(false);
+        } else if (job.status === "failed") {
+          clearInterval(poll);
+          setLoadingAction(null);
+          localStorage.removeItem(storageKey);
+        }
+      } catch { /* ignore */ }
+    }, 3000);
+    return () => clearInterval(poll);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project.id]);
+
   async function handleExport(format: "zip" | "csv" | "txt") {
     setLoadingAction(`export-${format}`);
     const response = await fetch(`/api/projects/${project.id}/export`, {
@@ -146,6 +176,9 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
     // ZIP is async — poll for completion
     if (format === "zip" && payload.jobId) {
       const jobId = payload.jobId as string;
+      const storageKey = `zip-job-${project.id}`;
+      localStorage.setItem(storageKey, jobId);
+
       const poll = setInterval(async () => {
         try {
           const jobRes = await fetch(`/api/jobs/${jobId}`);
@@ -154,12 +187,14 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
           if (job.status === "completed" && job.result?.downloadUrl) {
             clearInterval(poll);
             setLoadingAction(null);
+            localStorage.removeItem(storageKey);
             setExportLinks((current) => ({ ...current, zip: job.result.downloadUrl as string }));
             window.open(job.result.downloadUrl as string, "_blank");
             await refreshProject(false);
           } else if (job.status === "failed") {
             clearInterval(poll);
             setLoadingAction(null);
+            localStorage.removeItem(storageKey);
             alert(`导出失败: ${job.error || "未知错误"}`);
           }
         } catch {

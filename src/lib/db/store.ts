@@ -512,3 +512,14 @@ export async function updateJob(
 export async function getJob(id: string) {
   return prisma.job.findUnique({ where: { id } });
 }
+
+export async function getActiveJobByProject(projectId: string, type: string) {
+  return prisma.job.findFirst({
+    where: {
+      type,
+      status: { in: ["pending", "active"] },
+      payload: { path: ["projectId"], equals: projectId },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}

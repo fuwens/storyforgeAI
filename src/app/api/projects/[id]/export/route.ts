@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { addExport, createJob, getProject } from "@/lib/db/store";
+import { addExport, createJob, getActiveJobByProject, getProject } from "@/lib/db/store";
 import { ensureWorker, getQueue } from "@/lib/queue";
 import type { ExportJob } from "@/lib/types";
 import { uid } from "@/lib/utils";
@@ -53,6 +53,12 @@ export async function POST(
   }
 
   // ZIP → async via BullMQ
+  // Dedup: return existing job if one is already pending/active
+  const existingJob = await getActiveJobByProject(project.id, "export_zip");
+  if (existingJob) {
+    return NextResponse.json({ jobId: existingJob.id, status: existingJob.status });
+  }
+
   const jobId = uid("job");
   const fileName = `${project.id}-assets.zip`;
 
