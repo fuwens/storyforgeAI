@@ -34,7 +34,7 @@ export async function generateScript(args: {
   }
 
   const response = await client.chat.completions.create({
-    model: "claude-sonnet-4-5",
+    model: "claude-sonnet-4-6",
     messages: [
       { role: "system", content: buildScriptSystemPrompt(args) },
       { role: "user", content: `主题：${args.topic}` },
@@ -50,12 +50,11 @@ export async function generateStoryboard(script: string) {
   }
 
   const response = await client.chat.completions.create({
-    model: "gpt-4o",
+    model: "claude-sonnet-4-6",
     messages: [
-      { role: "system", content: "你是一个只输出 JSON 的分镜编排助手。" },
+      { role: "system", content: "你是一个只输出 JSON 的分镜编排助手。不要输出任何解释，只输出 JSON。" },
       { role: "user", content: buildStoryboardPrompt(script) },
     ],
-    response_format: { type: "json_object" },
   });
 
   const content = response.choices[0]?.message.content?.trim();
@@ -78,12 +77,11 @@ export async function generatePrompts(scene: {
   }
 
   const response = await client.chat.completions.create({
-    model: "gpt-4o",
+    model: "claude-sonnet-4-6",
     messages: [
-      { role: "system", content: "你是一个只输出 JSON 的视觉提示词专家。" },
+      { role: "system", content: "你是一个只输出 JSON 的视觉提示词专家。不要输出任何解释，只输出 JSON。" },
       { role: "user", content: buildPromptPrompt(scene) },
     ],
-    response_format: { type: "json_object" },
   });
 
   const content = response.choices[0]?.message.content?.trim();

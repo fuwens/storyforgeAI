@@ -81,15 +81,14 @@ async function syncTask(task: GenerationTask) {
 
     if (status === "failed") {
       const errorMessage = String(
-        (statusPayload.error as { message?: string } | undefined)?.message || "Generation failed",
+        ((statusPayload as Record<string, unknown>).error as { message?: string } | undefined)?.message || "Generation failed",
       );
       await updateTask(task.id, { status, errorMessage });
       return;
     }
 
-    const result = statusPayload.result as
-      | { data?: Array<{ url?: string }> }
-      | undefined;
+    const payload = statusPayload as Record<string, unknown>;
+    const result = payload.result as { data?: Array<{ url?: string }> } | undefined;
     const remoteUrl = result?.data?.[0]?.url;
     if (!remoteUrl) {
       await updateTask(task.id, { status: "failed", errorMessage: "Missing result URL" });
@@ -105,8 +104,8 @@ async function syncTask(task: GenerationTask) {
         status: "completed",
         sourceUrl: persisted.sourceUrl,
         storageUrl: persisted.storageUrl,
-        expiresAt: statusPayload.expires_at
-          ? new Date(Number(statusPayload.expires_at) * 1000).toISOString()
+        expiresAt: payload.expires_at
+          ? new Date(Number(payload.expires_at) * 1000).toISOString()
           : undefined,
       },
       asset,
