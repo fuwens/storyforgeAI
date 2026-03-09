@@ -4,7 +4,7 @@ import { getSessionCookieName, verifySessionToken } from "@/lib/auth";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const publicPaths = ["/login", "/api/auth/login"];
+  const publicPaths = ["/login", "/register", "/api/auth/login", "/api/auth/register"];
 
   if (publicPaths.some((path) => pathname.startsWith(path))) {
     return NextResponse.next();

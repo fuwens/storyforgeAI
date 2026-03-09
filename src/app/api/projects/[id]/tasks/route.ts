@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getSession } from "@/lib/auth";
 import { addTask, getProject, updateTask } from "@/lib/db/store";
 import { syncProjectTasks } from "@/lib/tasks/task-runner";
 import { persistRemoteAsset } from "@/lib/assets/persist";
@@ -12,7 +13,16 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const { id } = await params;
+  // Verify ownership before syncing
+  const check = await getProject(id, session.userId);
+  if (!check) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
   const project = await syncProjectTasks(id);
   if (!project) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
@@ -24,8 +34,12 @@ export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const { id } = await params;
-  const project = await getProject(id);
+  const project = await getProject(id, session.userId);
   if (!project) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
@@ -63,7 +77,6 @@ export async function POST(
 
         await addTask(project.id, shot.id, task);
 
-        // 图像是同步的，立刻持久化 asset
         if (submission.status === "completed" && submission.resultUrl) {
           const persisted = await persistRemoteAsset(submission.resultUrl, "image");
           const asset: Asset = {

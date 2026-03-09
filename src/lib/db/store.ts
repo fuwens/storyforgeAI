@@ -121,20 +121,23 @@ async function queryProject(projectId: string) {
   });
 }
 
-export async function listProjects(): Promise<Project[]> {
+export async function listProjects(userId: string): Promise<Project[]> {
   const rows = await prisma.project.findMany({
+    where: { userId },
     orderBy: { updatedAt: "desc" },
     include: projectInclude,
   });
   return rows.map(toProject);
 }
 
-export async function getProject(projectId: string): Promise<Project | null> {
+export async function getProject(projectId: string, userId?: string): Promise<Project | null> {
   const raw = await queryProject(projectId);
-  return raw ? toProject(raw) : null;
+  if (!raw) return null;
+  if (userId && raw.userId !== userId) return null;
+  return toProject(raw);
 }
 
-export async function createProject(input: CreateProjectInput): Promise<Project> {
+export async function createProject(input: CreateProjectInput, userId: string): Promise<Project> {
   const raw = await prisma.project.create({
     data: {
       title: input.title,
@@ -144,15 +147,17 @@ export async function createProject(input: CreateProjectInput): Promise<Project>
       platform: input.platform,
       presetKey: input.presetKey,
       styleTags: input.styleTags,
+      userId,
     },
     include: projectInclude,
   });
   return toProject(raw);
 }
 
-export async function duplicateProject(projectId: string): Promise<Project | null> {
+export async function duplicateProject(projectId: string, userId: string): Promise<Project | null> {
   const source = await queryProject(projectId);
   if (!source) return null;
+  if (source.userId !== userId) return null;
 
   const raw = await prisma.project.create({
     data: {
@@ -164,6 +169,7 @@ export async function duplicateProject(projectId: string): Promise<Project | nul
       presetKey: source.presetKey,
       styleTags: source.styleTags,
       status: "draft",
+      userId,
       scriptVersions: {
         create: source.scriptVersions.map((sv, idx) => ({
           content: sv.content,

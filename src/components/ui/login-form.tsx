@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
 
@@ -38,9 +39,9 @@ export function LoginForm() {
 
   return (
     <section className="rounded-[2rem] border border-white/10 bg-slate-950/70 p-8 shadow-2xl shadow-black/30">
-      <h2 className="mb-2 text-2xl font-semibold text-white">管理员登录</h2>
+      <h2 className="mb-2 text-2xl font-semibold text-white">登录</h2>
       <p className="mb-6 text-sm text-slate-400">
-        默认账号来自 `.env.local` 里的 `ADMIN_EMAIL` 和 `ADMIN_PASSWORD`
+        输入邮箱和密码登录 StoryForge
       </p>
       <form className="space-y-4" onSubmit={handleSubmit}>
         <label className="block space-y-2">
@@ -48,7 +49,8 @@ export function LoginForm() {
           <input
             name="email"
             type="email"
-            defaultValue="admin@storyforge.local"
+            required
+            placeholder="you@example.com"
             className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none ring-0 placeholder:text-slate-500"
           />
         </label>
@@ -57,7 +59,7 @@ export function LoginForm() {
           <input
             name="password"
             type="password"
-            defaultValue="storyforge"
+            required
             className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none"
           />
         </label>
@@ -70,6 +72,12 @@ export function LoginForm() {
           {loading ? "登录中..." : "进入 StoryForge"}
         </button>
       </form>
+      <p className="mt-4 text-center text-sm text-slate-400">
+        还没有账号？
+        <Link href="/register" className="text-indigo-300 hover:text-indigo-200 ml-1">
+          使用邀请码注册
+        </Link>
+      </p>
     </section>
   );
 }
