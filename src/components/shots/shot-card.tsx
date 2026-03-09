@@ -77,7 +77,7 @@ export function ShotCard({ shot, onApprove, onRetry, retryingTaskId, onPromptUpd
           <div className="mb-3 flex items-center justify-between">
             <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Prompts</p>
             <button
-              className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300"
+              className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300 cursor-pointer"
               onClick={() => setEditingPrompt(!editingPrompt)}
             >
               {editingPrompt ? "取消" : "编辑"}
@@ -114,7 +114,7 @@ export function ShotCard({ shot, onApprove, onRetry, retryingTaskId, onPromptUpd
                 />
               </label>
               <button
-                className="rounded-full bg-indigo-400 px-4 py-2 text-xs font-semibold text-slate-950 disabled:opacity-60"
+                className="rounded-full bg-indigo-400 px-4 py-2 text-xs font-semibold text-slate-950 disabled:opacity-60 cursor-pointer"
                 disabled={saving}
                 onClick={handleSavePrompt}
               >
@@ -174,7 +174,7 @@ export function ShotCard({ shot, onApprove, onRetry, retryingTaskId, onPromptUpd
               <div className="mt-3 flex items-center justify-between gap-3">
                 <StatusPill value={asset.approved ? "completed" : "draft"} />
                 <button
-                  className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-white"
+                  className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-white cursor-pointer"
                   onClick={() => onApprove(asset.id)}
                 >
                   {asset.approved ? "已确认" : "确认使用"}

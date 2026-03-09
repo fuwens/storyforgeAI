@@ -226,7 +226,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
                 <h2 className="mt-2 text-2xl font-semibold text-white">脚本</h2>
               </div>
               <button
-                className="rounded-full bg-indigo-400 px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-60"
+                className="rounded-full bg-indigo-400 px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-60 cursor-pointer"
                 onClick={handleGenerateScript}
                 disabled={loadingAction === "script"}
               >
@@ -255,7 +255,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
                 <h2 className="mt-2 text-2xl font-semibold text-white">分镜</h2>
               </div>
               <button
-                className="rounded-full border border-white/10 px-4 py-2 text-sm text-white disabled:opacity-60"
+                className="rounded-full border border-white/10 px-4 py-2 text-sm text-white disabled:opacity-60 cursor-pointer"
                 onClick={handleGenerateStoryboard}
                 disabled={loadingAction === "storyboard"}
               >
@@ -295,7 +295,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
                 <h2 className="mt-2 text-2xl font-semibold text-white">Prompt</h2>
               </div>
               <button
-                className="rounded-full border border-white/10 px-4 py-2 text-sm text-white disabled:opacity-60"
+                className="rounded-full border border-white/10 px-4 py-2 text-sm text-white disabled:opacity-60 cursor-pointer"
                 onClick={handleGeneratePrompts}
                 disabled={loadingAction === "prompts"}
               >
@@ -415,7 +415,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
                   <h2 className="mt-2 text-2xl font-semibold text-white">批量生成</h2>
                 </div>
                 <button
-                  className="rounded-full bg-white px-6 py-2 text-sm font-semibold text-slate-950 disabled:opacity-60"
+                  className="rounded-full bg-white px-6 py-2 text-sm font-semibold text-slate-950 disabled:opacity-60 cursor-pointer"
                   onClick={handleSubmitTasks}
                   disabled={loadingAction === "tasks"}
                 >
@@ -510,7 +510,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
                   {(["zip", "csv", "txt"] as const).map((format) => (
                     <button
                       key={format}
-                      className="rounded-full border border-white/10 px-4 py-2 text-sm text-white disabled:opacity-60"
+                      className="rounded-full border border-white/10 px-4 py-2 text-sm text-white disabled:opacity-60 cursor-pointer"
                       onClick={() => handleExport(format)}
                       disabled={!!loadingAction}
                     >
@@ -600,7 +600,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
         <button
           onClick={goPrev}
           disabled={currentStep === 1}
-          className="rounded-full border border-white/10 px-5 py-2 text-sm text-white disabled:opacity-30"
+          className="rounded-full border border-white/10 px-5 py-2 text-sm text-white disabled:opacity-30 cursor-pointer"
         >
           ← 上一步
         </button>
@@ -608,7 +608,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
         <button
           onClick={goNext}
           disabled={currentStep === TOTAL_STEPS || !canGoNext[currentStep]}
-          className="rounded-full bg-indigo-400 px-5 py-2 text-sm font-semibold text-slate-950 disabled:opacity-30"
+          className="rounded-full bg-indigo-400 px-5 py-2 text-sm font-semibold text-slate-950 disabled:opacity-30 cursor-pointer"
         >
           下一步 →
         </button>

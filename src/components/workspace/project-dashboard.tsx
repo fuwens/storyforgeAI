@@ -71,7 +71,7 @@ export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
             <h1 className="mt-3 text-4xl font-semibold text-white">新建创作项目</h1>
           </div>
           <button
-            className="rounded-full border border-white/10 px-4 py-2 text-sm text-slate-200"
+            className="rounded-full border border-white/10 px-4 py-2 text-sm text-slate-200 cursor-pointer"
             onClick={handleLogout}
           >
             退出
@@ -129,7 +129,7 @@ export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
           <button
             type="submit"
             disabled={loading}
-            className="rounded-2xl bg-indigo-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-indigo-300 disabled:opacity-60"
+            className="rounded-2xl bg-indigo-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-indigo-300 disabled:opacity-60 cursor-pointer"
           >
             {loading ? "创建中..." : "创建项目并进入工作台"}
           </button>
@@ -168,7 +168,7 @@ export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
                   <Link href={`/projects/${project.id}`} className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950">
                     打开工作台
                   </Link>
-                  <button className="rounded-full border border-white/10 px-4 py-2 text-sm text-white" onClick={() => handleDuplicate(project.id)}>
+                  <button className="rounded-full border border-white/10 px-4 py-2 text-sm text-white cursor-pointer" onClick={() => handleDuplicate(project.id)}>
                     复制项目
                   </button>
                 </div>
