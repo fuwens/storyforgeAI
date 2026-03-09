@@ -5,8 +5,10 @@ import JSZip from "jszip";
 import { NextResponse } from "next/server";
 
 import { addExport, getProject } from "@/lib/db/store";
-import type { ExportJob } from "@/lib/types";
+import type { ExportJob, Shot } from "@/lib/types";
 import { uid } from "@/lib/utils";
+
+type FullProject = NonNullable<Awaited<ReturnType<typeof getProject>>>;
 
 export async function POST(
   request: Request,
@@ -28,16 +30,27 @@ export async function POST(
     buffer = Buffer.from(buildCsv(project), "utf8");
   } else if (format === "txt") {
     fileName = `${project.id}-script.txt`;
-    buffer = Buffer.from(project.scriptVersions[0]?.content || "", "utf8");
+    buffer = Buffer.from(buildTxt(project), "utf8");
   } else {
     fileName = `${project.id}-assets.zip`;
     buffer = await buildZip(project);
   }
 
-  const outputPath = path.join(process.cwd(), "public", "generated", fileName);
-  await fs.writeFile(outputPath, buffer);
-  const downloadUrl = `/generated/${fileName}`;
+  const outputDir = path.join(process.cwd(), "public", "generated");
+  const outputPath = path.join(outputDir, fileName);
 
+  try {
+    await fs.mkdir(outputDir, { recursive: true });
+    await fs.writeFile(outputPath, buffer);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown write error";
+    return NextResponse.json(
+      { error: `Failed to write export file: ${message}` },
+      { status: 500 },
+    );
+  }
+
+  const downloadUrl = `/generated/${fileName}`;
   const now = new Date().toISOString();
   const exportJob: ExportJob = {
     id: uid("export"),
@@ -53,44 +66,144 @@ export async function POST(
   return NextResponse.json({ downloadUrl, project: refreshed });
 }
 
-function buildCsv(project: NonNullable<Awaited<ReturnType<typeof getProject>>>) {
-  const rows = [
-    ["sequence", "title", "narration", "scene_description", "generation_type", "model", "approved_asset"].join(","),
-  ];
+/* ---------- helpers ---------- */
+
+function getLatestScript(project: FullProject) {
+  if (project.scriptVersions.length === 0) return null;
+  return project.scriptVersions.reduce((a, b) =>
+    a.version > b.version ? a : b,
+  );
+}
+
+function getShotAssetUrl(shot: Shot): string {
+  const approved = shot.assets.find((a) => a.approved);
+  if (approved) return approved.storageUrl || approved.sourceUrl;
+  if (shot.assets.length > 0) {
+    const latest = shot.assets[shot.assets.length - 1];
+    return latest.storageUrl || latest.sourceUrl;
+  }
+  return "";
+}
+
+function getActivePrompt(shot: Shot) {
+  const active = shot.promptVariants.find((p) => p.isActive);
+  return active || shot.promptVariants[0] || null;
+}
+
+/* ---------- ZIP ---------- */
+
+async function buildZip(project: FullProject) {
+  const zip = new JSZip();
+  const latestScript = getLatestScript(project);
+
+  const manifest: Record<string, unknown> = {
+    project: {
+      title: project.title,
+      topic: project.topic,
+      platform: project.platform,
+      language: project.language,
+    },
+    script: latestScript?.content || "",
+    shots: project.shots.map((shot) => {
+      const prompt = getActivePrompt(shot);
+      const approved = shot.assets.find((a) => a.approved);
+      const latestAsset =
+        shot.assets.length > 0
+          ? shot.assets[shot.assets.length - 1]
+          : null;
+      const asset = approved || latestAsset;
+
+      return {
+        sequence: shot.sequence,
+        title: shot.title,
+        sceneDescription: shot.sceneDescription,
+        narration: shot.narration,
+        emotion: shot.emotion,
+        shotType: shot.shotType,
+        durationSeconds: shot.durationSeconds,
+        prompt: prompt
+          ? {
+              imagePrompt: prompt.imagePrompt,
+              videoPrompt: prompt.videoPrompt,
+              negativePrompt: prompt.negativePrompt,
+            }
+          : null,
+        asset: asset
+          ? {
+              sourceUrl: asset.sourceUrl,
+              storageUrl: asset.storageUrl || null,
+            }
+          : null,
+      };
+    }),
+  };
+
+  zip.file("manifest.json", JSON.stringify(manifest, null, 2));
+
+  const urlLines: string[] = [];
   for (const shot of project.shots) {
-    const approved = shot.assets.find((asset) => asset.approved)?.storageUrl || "";
+    const url = getShotAssetUrl(shot);
+    urlLines.push(`Shot ${shot.sequence}: ${shot.title}`);
+    urlLines.push(`  Image/Video URL: ${url || "(none)"}`);
+    urlLines.push("");
+  }
+  zip.file("urls.txt", urlLines.join("\n"));
+
+  return zip.generateAsync({ type: "nodebuffer" });
+}
+
+/* ---------- CSV ---------- */
+
+function buildCsv(project: FullProject) {
+  const latestScript = getLatestScript(project);
+  const scriptContent = latestScript?.content || "";
+
+  const BOM = "\uFEFF";
+  const header = [
+    "Shot序号",
+    "标题",
+    "场景描述",
+    "旁白",
+    "情绪",
+    "镜头类型",
+    "时长",
+    "素材URL",
+    "Image Prompt",
+    "Video Prompt",
+  ].join(",");
+
+  const rows = [header];
+  for (const shot of project.shots) {
+    const url = getShotAssetUrl(shot);
+    const prompt = getActivePrompt(shot);
     rows.push(
       [
         shot.sequence,
         csvEscape(shot.title),
-        csvEscape(shot.narration),
         csvEscape(shot.sceneDescription),
-        shot.generationType,
-        shot.model || "",
-        approved,
+        csvEscape(shot.narration),
+        csvEscape(shot.emotion),
+        csvEscape(shot.shotType),
+        shot.durationSeconds,
+        csvEscape(url),
+        csvEscape(prompt?.imagePrompt || ""),
+        csvEscape(prompt?.videoPrompt || ""),
       ].join(","),
     );
   }
-  return rows.join("\n");
+
+  // scriptContent is available in manifest/txt; CSV focuses on shot-level data
+  return BOM + rows.join("\n");
 }
 
-async function buildZip(project: NonNullable<Awaited<ReturnType<typeof getProject>>>) {
-  const zip = new JSZip();
-  zip.file("script.txt", project.scriptVersions[0]?.content || "");
-  zip.file("shots.csv", buildCsv(project));
+/* ---------- TXT ---------- */
 
-  for (const shot of project.shots) {
-    const approved = shot.assets.find((asset) => asset.approved) || shot.assets[0];
-    if (!approved) continue;
-    const assetUrl = approved.storageUrl || approved.sourceUrl;
-    if (!assetUrl.startsWith("/generated/")) continue;
-    const filePath = path.join(process.cwd(), "public", assetUrl.replace(/^\//, ""));
-    const fileBuffer = await fs.readFile(filePath);
-    zip.file(`assets/shot-${shot.sequence}-${path.basename(assetUrl)}`, fileBuffer);
-  }
-
-  return zip.generateAsync({ type: "nodebuffer" });
+function buildTxt(project: FullProject) {
+  const latestScript = getLatestScript(project);
+  return latestScript?.content || "";
 }
+
+/* ---------- util ---------- */
 
 function csvEscape(value: string) {
   return `"${value.replaceAll('"', '""')}"`;
