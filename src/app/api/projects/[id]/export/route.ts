@@ -8,6 +8,9 @@ import { addExport, getProject } from "@/lib/db/store";
 import type { ExportJob, Shot } from "@/lib/types";
 import { uid } from "@/lib/utils";
 
+// Disable Next.js default 30s timeout for this route (video download + zip can take longer)
+export const maxDuration = 300; // 5 minutes
+
 type FullProject = NonNullable<Awaited<ReturnType<typeof getProject>>>;
 
 export async function POST(
@@ -177,25 +180,31 @@ async function buildZip(project: FullProject) {
   const mediaFolder = zip.folder("media")!;
   const urlLines: string[] = [];
 
-  await Promise.allSettled(
-    project.shots.map(async (shot) => {
-      const asset = getShotAsset(shot);
-      const url = asset ? (asset.storageUrl || asset.sourceUrl) : "";
-      const seqLabel = String(shot.sequence).padStart(2, "0");
+  // Concurrency-limited download (max 3 at a time to avoid memory spike)
+  const CONCURRENCY = 3;
+  const shots = [...project.shots];
+  for (let i = 0; i < shots.length; i += CONCURRENCY) {
+    const batch = shots.slice(i, i + CONCURRENCY);
+    await Promise.allSettled(
+      batch.map(async (shot) => {
+        const asset = getShotAsset(shot);
+        const url = asset ? (asset.storageUrl || asset.sourceUrl) : "";
+        const seqLabel = String(shot.sequence).padStart(2, "0");
 
-      urlLines[shot.sequence - 1] =
-        `Shot ${shot.sequence}: ${shot.title}\n  URL: ${url || "(none)"}`;
+        urlLines[shot.sequence - 1] =
+          `Shot ${shot.sequence}: ${shot.title}\n  URL: ${url || "(none)"}`;
 
-      if (!url) return;
+        if (!url) return;
 
-      const buf = await fetchMediaBuffer(url);
-      if (!buf) return;
+        const buf = await fetchMediaBuffer(url);
+        if (!buf) return;
 
-      const ext = guessExtension(url, asset?.mimeType);
-      const fileName = `shot-${seqLabel}-${shot.title.replace(/[^\w\u4e00-\u9fa5]/g, "_")}${ext}`;
-      mediaFolder.file(fileName, buf);
-    }),
-  );
+        const ext = guessExtension(url, asset?.mimeType);
+        const fileName = `shot-${seqLabel}-${shot.title.replace(/[^\w\u4e00-\u9fa5]/g, "_")}${ext}`;
+        mediaFolder.file(fileName, buf);
+      }),
+    );
+  }
 
   zip.file("urls.txt", urlLines.filter(Boolean).join("\n\n"));
 
