@@ -32,6 +32,7 @@ model User {
   passwordHash String
   name         String?
   role         String   @default("user") // user | admin
+  disabled     Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   projects     Project[]
@@ -42,6 +43,7 @@ model InviteCode {
   code      String    @unique
   usedBy    String?
   usedAt    DateTime?
+  disabled  Boolean   @default(false)
   createdAt DateTime  @default(now())
   expiresAt DateTime?
 }

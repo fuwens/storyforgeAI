@@ -22,6 +22,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "邮箱或密码不正确" }, { status: 401 });
   }
 
+  if (user.disabled) {
+    return NextResponse.json({ error: "账号已被禁用" }, { status: 403 });
+  }
+
   const valid = await verifyPassword(password, user.passwordHash);
   if (!valid) {
     return NextResponse.json({ error: "邮箱或密码不正确" }, { status: 401 });
@@ -44,5 +48,8 @@ export async function POST(request: Request) {
     },
   );
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    redirect: user.role === "admin" ? "/admin" : "/projects",
+  });
 }

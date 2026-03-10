@@ -7,7 +7,6 @@ import { FormEvent, useState } from "react";
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/projects";
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -33,7 +32,9 @@ export function LoginForm() {
       return;
     }
 
-    router.push(next);
+    const payload = (await response.json()) as { ok: boolean; redirect?: string };
+    const target = searchParams.get("next") || payload.redirect || "/projects";
+    router.push(target);
     router.refresh();
   }
 

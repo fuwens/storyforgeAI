@@ -54,3 +54,27 @@ export async function GET() {
 
   return NextResponse.json(inviteCodes);
 }
+
+export async function DELETE(request: Request) {
+  const session = await getSession();
+  if (!session || session.role !== "admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const body = (await request.json()) as { code?: string };
+  if (!body.code) {
+    return NextResponse.json({ error: "code is required" }, { status: 400 });
+  }
+
+  const invite = await prisma.inviteCode.findUnique({ where: { code: body.code } });
+  if (!invite) {
+    return NextResponse.json({ error: "Invite code not found" }, { status: 404 });
+  }
+
+  await prisma.inviteCode.update({
+    where: { code: body.code },
+    data: { disabled: true },
+  });
+
+  return NextResponse.json({ ok: true });
+}
