@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useMemo, useState } from "react";
 
+import { DeleteConfirmModal } from "@/components/ui/delete-confirm-modal";
 import { StatusPill } from "@/components/ui/status-pill";
 import { projectPresets } from "@/lib/toapis/config";
 import type { Project } from "@/lib/types";
@@ -17,6 +18,8 @@ export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
   const router = useRouter();
   const [projects, setProjects] = useState(initialProjects);
   const [loading, setLoading] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const defaultPreset = useMemo(() => projectPresets[0], []);
 
   async function handleCreateProject(event: FormEvent<HTMLFormElement>) {
@@ -54,6 +57,16 @@ export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
     if (!response.ok) return;
     const project = (await response.json()) as Project;
     setProjects((current) => [project, ...current]);
+  }
+
+  async function handleDeleteConfirm() {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    const response = await fetch(`/api/projects/${deleteTarget.id}`, { method: "DELETE" });
+    setDeleteLoading(false);
+    if (!response.ok) return;
+    setProjects((current) => current.filter((p) => p.id !== deleteTarget.id));
+    setDeleteTarget(null);
   }
 
   async function handleLogout() {
@@ -171,12 +184,26 @@ export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
                   <button className="rounded-full border border-white/10 px-4 py-2 text-sm text-white cursor-pointer" onClick={() => handleDuplicate(project.id)}>
                     复制项目
                   </button>
+                  <button
+                    className="rounded-full border border-red-500/30 px-4 py-2 text-sm text-red-400 transition hover:bg-red-500/10 cursor-pointer"
+                    onClick={() => setDeleteTarget({ id: project.id, title: project.title })}
+                  >
+                    删除
+                  </button>
                 </div>
               </div>
             ))
           )}
         </div>
       </section>
+
+      <DeleteConfirmModal
+        isOpen={!!deleteTarget}
+        projectName={deleteTarget?.title ?? ""}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteTarget(null)}
+        loading={deleteLoading}
+      />
     </div>
   );
 }

@@ -438,6 +438,29 @@ export async function addExport(projectId: string, exportJob: ExportJob) {
   return exportJob;
 }
 
+export async function deleteProject(projectId: string, userId: string): Promise<boolean> {
+  const project = await prisma.project.findUnique({ where: { id: projectId } });
+  if (!project || project.userId !== userId) return false;
+
+  await prisma.$transaction(async (tx) => {
+    const shots = await tx.shot.findMany({ where: { projectId }, select: { id: true } });
+    const shotIds = shots.map((s) => s.id);
+
+    await tx.asset.deleteMany({ where: { shotId: { in: shotIds } } });
+    await tx.generationTask.deleteMany({ where: { shotId: { in: shotIds } } });
+    await tx.promptVariant.deleteMany({ where: { shotId: { in: shotIds } } });
+    await tx.shot.deleteMany({ where: { projectId } });
+    await tx.scriptVersion.deleteMany({ where: { projectId } });
+    await tx.exportJob.deleteMany({ where: { projectId } });
+    await tx.job.deleteMany({
+      where: { payload: { path: ["projectId"], equals: projectId } },
+    });
+    await tx.project.delete({ where: { id: projectId } });
+  });
+
+  return true;
+}
+
 export async function getProjectByAsset(assetId: string) {
   const asset = await prisma.asset.findUnique({
     where: { id: assetId },
