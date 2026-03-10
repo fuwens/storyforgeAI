@@ -1,16 +1,21 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
-const steps = [
-  "1. 主题",
-  "2. 脚本",
-  "3. 分镜",
-  "4. Prompt",
-  "5. 配置",
-  "6. 任务",
-  "7. 审核",
-];
-
 export function StepNav({ activeStep }: { activeStep: number }) {
+  const t = useTranslations("stepNav");
+
+  const steps = [
+    t("step1"),
+    t("step2"),
+    t("step3"),
+    t("step4"),
+    t("step5"),
+    t("step6"),
+    t("step7"),
+  ];
+
   return (
     <div className="grid gap-2 md:grid-cols-7">
       {steps.map((step, index) => {

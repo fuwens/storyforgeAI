@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { getSession } from "@/lib/auth";
 
@@ -13,6 +14,8 @@ export default async function AdminLayout({
     redirect("/login");
   }
 
+  const t = await getTranslations("admin");
+
   return (
     <div className="flex min-h-screen">
       {/* Sidebar */}
@@ -21,18 +24,18 @@ export default async function AdminLayout({
           href="/admin"
           className="mb-8 block text-lg font-semibold text-white"
         >
-          Admin
+          {t("title")}
         </Link>
         <nav className="space-y-1">
-          <NavLink href="/admin/invite-codes">邀请码</NavLink>
-          <NavLink href="/admin/users">用户管理</NavLink>
+          <NavLink href="/admin/invite-codes">{t("inviteCodes")}</NavLink>
+          <NavLink href="/admin/users">{t("users")}</NavLink>
         </nav>
         <div className="mt-8 border-t border-white/10 pt-4">
           <Link
             href="/projects"
             className="block rounded-lg px-3 py-2 text-sm text-slate-400 hover:bg-white/5 hover:text-slate-200"
           >
-            ← 返回主站
+            {t("backToMain")}
           </Link>
         </div>
       </aside>

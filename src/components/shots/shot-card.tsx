@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 import { StatusPill } from "@/components/ui/status-pill";
 import type { Shot } from "@/lib/types";
@@ -17,6 +18,7 @@ export function ShotCard({ shot, onApprove, onRetry, retryingTaskId, onPromptUpd
   const latestTask = shot.tasks[0];
   const approvedAsset = shot.assets.find((asset) => asset.approved);
   const activePrompt = shot.promptVariants[0];
+  const t = useTranslations("shotCard");
 
   const [editingPrompt, setEditingPrompt] = useState(false);
   const [imagePrompt, setImagePrompt] = useState(activePrompt?.imagePrompt ?? "");
@@ -59,15 +61,15 @@ export function ShotCard({ shot, onApprove, onRetry, retryingTaskId, onPromptUpd
 
       <div className="mt-5 grid gap-3 rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-300">
         <p>
-          <span className="text-slate-500">模型：</span>
-          {shot.model || "未配置"}
+          <span className="text-slate-500">{t("model")}</span>
+          {shot.model || t("modelUnset")}
         </p>
         <p>
-          <span className="text-slate-500">比例：</span>
+          <span className="text-slate-500">{t("ratio")}</span>
           {shot.aspectRatio || "-"}
         </p>
         <p>
-          <span className="text-slate-500">情绪 / 镜头：</span>
+          <span className="text-slate-500">{t("emotion")}</span>
           {shot.emotion} / {shot.shotType}
         </p>
       </div>
@@ -80,7 +82,7 @@ export function ShotCard({ shot, onApprove, onRetry, retryingTaskId, onPromptUpd
               className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300 cursor-pointer"
               onClick={() => setEditingPrompt(!editingPrompt)}
             >
-              {editingPrompt ? "取消" : "编辑"}
+              {editingPrompt ? t("cancelPrompt") : t("editPrompt")}
             </button>
           </div>
 
@@ -118,7 +120,7 @@ export function ShotCard({ shot, onApprove, onRetry, retryingTaskId, onPromptUpd
                 disabled={saving}
                 onClick={handleSavePrompt}
               >
-                {saving ? "保存中..." : "保存 Prompt"}
+                {saving ? t("saving") : t("savePrompt")}
               </button>
             </div>
           ) : (
@@ -167,7 +169,7 @@ export function ShotCard({ shot, onApprove, onRetry, retryingTaskId, onPromptUpd
               ) : (
                 <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-white/10 bg-slate-950/60 text-center text-xs text-slate-400">
                   <a href={previewUrl} target="_blank" rel="noreferrer" className="text-indigo-300 underline">
-                    打开文件预览
+                    {t("openFile")}
                   </a>
                 </div>
               )}
@@ -177,7 +179,7 @@ export function ShotCard({ shot, onApprove, onRetry, retryingTaskId, onPromptUpd
                   className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-white cursor-pointer"
                   onClick={() => onApprove(asset.id)}
                 >
-                  {asset.approved ? "已确认" : "确认使用"}
+                  {asset.approved ? t("approved") : t("approve")}
                 </button>
               </div>
             </div>
@@ -187,13 +189,13 @@ export function ShotCard({ shot, onApprove, onRetry, retryingTaskId, onPromptUpd
 
       {latestTask?.status === "failed" ? (
         <div className="mt-4 flex items-center justify-between rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
-          <span>{latestTask.errorMessage || "任务失败"}</span>
+          <span>{latestTask.errorMessage || t("taskFailed")}</span>
           <button
             className="rounded-full border border-white/10 px-3 py-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={retryingTaskId === latestTask.id}
             onClick={() => onRetry(latestTask.id)}
           >
-            {retryingTaskId === latestTask.id ? "重试中..." : "重试"}
+            {retryingTaskId === latestTask.id ? t("retrying") : t("retry")}
           </button>
         </div>
       ) : null}

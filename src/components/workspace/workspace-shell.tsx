@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 
 import { ShotCard } from "@/components/shots/shot-card";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -18,6 +19,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
   const [scriptDraft, setScriptDraft] = useState(initialProject.scriptVersions[0]?.content || "");
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [exportLinks, setExportLinks] = useState<Record<string, string>>({});
+  const t = useTranslations("workspace");
 
   const hasScript = Boolean(scriptDraft);
   const hasShots = project.shots.length > 0;
@@ -41,12 +43,13 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
     async (syncTasks = false) => {
       const url = syncTasks ? `/api/projects/${project.id}/tasks` : `/api/projects/${project.id}`;
       const response = await fetch(url, { cache: "no-store" });
-      if (response.status === 401) { alert("登录已过期，请重新登录"); window.location.href = "/login"; return; }
+      if (response.status === 401) { alert(t("authExpired")); window.location.href = "/login"; return; }
       if (!response.ok) return;
       const nextProject = (await response.json()) as Project;
       setProject(nextProject);
       setScriptDraft(nextProject.scriptVersions[0]?.content || "");
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [project.id],
   );
 
@@ -59,7 +62,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
   }, [hasActiveTasks, refreshProject]);
 
   function handleUnauthorized() {
-    alert("登录已过期，请重新登录");
+    alert(t("authExpired"));
     window.location.href = "/login";
   }
 
@@ -182,9 +185,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
     }
     const payload = await response.json();
 
-    // ZIP is async — poll for completion; or instant if cached
     if (format === "zip") {
-      // Cache hit — file already exists, download immediately
       if (payload.downloadUrl && !payload.jobId) {
         setLoadingAction(null);
         setExportLinks((current) => ({ ...current, zip: payload.downloadUrl as string }));
@@ -214,7 +215,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
             clearInterval(poll);
             setLoadingAction(null);
             localStorage.removeItem(storageKey);
-            alert(`导出失败: ${job.error || "未知错误"}`);
+            alert(`${t("exportFailed")}: ${job.error || t("unknownError")}`);
           }
         } catch {
           // ignore transient fetch errors
@@ -223,7 +224,6 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
       return;
     }
 
-    // CSV/TXT — synchronous, same as before
     setLoadingAction(null);
     if (payload.downloadUrl) {
       setProject(payload.project as Project);
@@ -231,11 +231,17 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
     }
   }
 
-  // 步骤配置
   const TOTAL_STEPS = 7;
-  const stepLabels = ["项目信息", "脚本", "分镜", "Prompt", "配置", "生成", "审核导出"];
+  const stepLabels = [
+    t("step1"),
+    t("step2"),
+    t("step3"),
+    t("step4"),
+    t("step5"),
+    t("step6"),
+    t("step7"),
+  ];
 
-  // 每个步骤的「下一步」条件
   const canGoNext: Record<number, boolean> = {
     1: true,
     2: hasScript,
@@ -256,7 +262,6 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
     if (currentStep > 1) setCurrentStep((s) => s - 1);
   }
 
-  // 进度条点击跳转（只能跳到已解锁的步骤）
   function canJumpTo(step: number) {
     if (step === 1) return true;
     if (step === 2) return true;
@@ -268,7 +273,6 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
     return false;
   }
 
-  // 各步骤内容
   function renderStep() {
     switch (currentStep) {
       case 1:
@@ -287,19 +291,19 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
               </div>
               <div className="mt-6 grid gap-3 text-sm text-slate-400 sm:grid-cols-3">
                 <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-                  <p className="text-slate-500">时长目标</p>
+                  <p className="text-slate-500">{t("targetDuration")}</p>
                   <p className="mt-1 text-white">{project.targetDuration}</p>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-                  <p className="text-slate-500">语言</p>
+                  <p className="text-slate-500">{t("language")}</p>
                   <p className="mt-1 text-white">{project.language}</p>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-                  <p className="text-slate-500">状态</p>
+                  <p className="text-slate-500">{t("status")}</p>
                   <div className="mt-1"><StatusPill value={project.status} /></div>
                 </div>
               </div>
-              <p className="mt-4 text-xs text-slate-500">最近更新 {formatDate(project.updatedAt)}</p>
+              <p className="mt-4 text-xs text-slate-500">{t("lastUpdated")} {formatDate(project.updatedAt)}</p>
             </div>
           </div>
         );
@@ -310,25 +314,25 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Step 2</p>
-                <h2 className="mt-2 text-2xl font-semibold text-white">脚本</h2>
+                <h2 className="mt-2 text-2xl font-semibold text-white">{t("scriptTitle")}</h2>
               </div>
               <button
                 className="rounded-full bg-indigo-400 px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-60 cursor-pointer"
                 onClick={handleGenerateScript}
                 disabled={loadingAction === "script"}
               >
-                {loadingAction === "script" ? "生成中..." : scriptDraft ? "重新生成" : "生成脚本"}
+                {loadingAction === "script" ? t("generating") : scriptDraft ? t("regenerateScript") : t("generateScript")}
               </button>
             </div>
             <textarea
               rows={18}
               value={scriptDraft}
               onChange={(e) => setScriptDraft(e.target.value)}
-              placeholder="点击「生成脚本」让 AI 根据主题生成旁白脚本，或直接在此输入..."
+              placeholder={t("scriptPlaceholder")}
               className="w-full rounded-3xl border border-white/10 bg-white/5 px-4 py-4 text-sm leading-7 text-slate-200 placeholder:text-slate-600"
             />
             {!hasScript && (
-              <p className="mt-3 text-xs text-amber-400">⚠ 需要先生成或填写脚本才能进入下一步</p>
+              <p className="mt-3 text-xs text-amber-400">{t("scriptRequired")}</p>
             )}
           </div>
         );
@@ -339,14 +343,14 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Step 3</p>
-                <h2 className="mt-2 text-2xl font-semibold text-white">分镜</h2>
+                <h2 className="mt-2 text-2xl font-semibold text-white">{t("storyboardTitle")}</h2>
               </div>
               <button
                 className="rounded-full border border-white/10 px-4 py-2 text-sm text-white disabled:opacity-60 cursor-pointer"
                 onClick={handleGenerateStoryboard}
                 disabled={loadingAction === "storyboard"}
               >
-                {loadingAction === "storyboard" ? "生成中..." : hasShots ? "重新生成分镜" : "生成分镜"}
+                {loadingAction === "storyboard" ? t("generating") : hasShots ? t("regenerateStoryboard") : t("generateStoryboard")}
               </button>
             </div>
             {hasShots ? (
@@ -367,7 +371,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
               </div>
             ) : (
               <div className="flex h-40 items-center justify-center rounded-3xl border border-dashed border-white/10 text-slate-500">
-                点击「生成分镜」让 AI 根据脚本自动拆分镜头
+                {t("storyboardEmpty")}
               </div>
             )}
           </div>
@@ -379,14 +383,14 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Step 4</p>
-                <h2 className="mt-2 text-2xl font-semibold text-white">Prompt</h2>
+                <h2 className="mt-2 text-2xl font-semibold text-white">{t("promptTitle")}</h2>
               </div>
               <button
                 className="rounded-full border border-white/10 px-4 py-2 text-sm text-white disabled:opacity-60 cursor-pointer"
                 onClick={handleGeneratePrompts}
                 disabled={loadingAction === "prompts"}
               >
-                {loadingAction === "prompts" ? "生成中..." : hasPrompts ? "重新生成所有 Prompt" : "批量生成 Prompt"}
+                {loadingAction === "prompts" ? t("generating") : hasPrompts ? t("regeneratePrompts") : t("generatePrompts")}
               </button>
             </div>
             <div className="space-y-4">
@@ -402,7 +406,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
                         {pv.negativePrompt && <div><span className="text-slate-500">Negative: </span>{pv.negativePrompt}</div>}
                       </div>
                     ) : (
-                      <p className="text-xs text-slate-600">暂无 Prompt，点击批量生成</p>
+                      <p className="text-xs text-slate-600">{t("noPrompt")}</p>
                     )}
                   </div>
                 );
@@ -416,8 +420,8 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
           <div className="rounded-[2rem] border border-white/10 bg-slate-950/60 p-6">
             <div className="mb-4">
               <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Step 5</p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">生成配置</h2>
-              <p className="mt-1 text-sm text-slate-400">为每个镜头选择生成类型和模型</p>
+              <h2 className="mt-2 text-2xl font-semibold text-white">{t("configTitle")}</h2>
+              <p className="mt-1 text-sm text-slate-400">{t("configSubtitle")}</p>
             </div>
             <div className="space-y-4">
               {project.shots.map((shot) => {
@@ -429,7 +433,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
                     <p className="mb-3 text-sm font-medium text-white">Shot {shot.sequence} · {shot.title}</p>
                     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                       <label className="grid gap-2 text-xs text-slate-400">
-                        类型
+                        {t("configType")}
                         <select
                           value={shot.generationType}
                           onChange={(e) => {
@@ -449,7 +453,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
                         </select>
                       </label>
                       <label className="grid gap-2 text-xs text-slate-400">
-                        模型
+                        {t("configModel")}
                         <select
                           value={shot.model || (shot.generationType === "image" ? imageModels[0].id : videoModels[0].id)}
                           onChange={(e) => handleShotUpdate(shot, { model: e.target.value })}
@@ -461,7 +465,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
                         </select>
                       </label>
                       <label className="grid gap-2 text-xs text-slate-400">
-                        比例
+                        {t("configRatio")}
                         <select
                           value={shot.aspectRatio}
                           onChange={(e) => handleShotUpdate(shot, { aspectRatio: e.target.value })}
@@ -473,7 +477,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
                         </select>
                       </label>
                       <label className="grid gap-2 text-xs text-slate-400">
-                        时长
+                        {t("configDuration")}
                         <select
                           value={shot.durationSeconds}
                           onChange={(e) => handleShotUpdate(shot, { durationSeconds: Number(e.target.value) })}
@@ -499,44 +503,43 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
               <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Step 6</p>
-                  <h2 className="mt-2 text-2xl font-semibold text-white">批量生成</h2>
+                  <h2 className="mt-2 text-2xl font-semibold text-white">{t("batchTitle")}</h2>
                 </div>
                 <button
                   className="rounded-full bg-white px-6 py-2 text-sm font-semibold text-slate-950 disabled:opacity-60 cursor-pointer"
                   onClick={handleSubmitTasks}
                   disabled={loadingAction === "tasks"}
                 >
-                  {loadingAction === "tasks" ? "提交中..." : "开始批量生成"}
+                  {loadingAction === "tasks" ? t("submitting") : t("startBatch")}
                 </button>
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-                  <p className="text-xs text-slate-500">总镜头</p>
+                  <p className="text-xs text-slate-500">{t("totalShots")}</p>
                   <p className="mt-2 text-3xl font-semibold text-white">{project.shots.length}</p>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-                  <p className="text-xs text-slate-500">生成中</p>
+                  <p className="text-xs text-slate-500">{t("inProgress")}</p>
                   <p className="mt-2 text-3xl font-semibold text-amber-300">
                     {project.shots.reduce((sum, shot) =>
-                      sum + shot.tasks.filter((t) => t.status === "queued" || t.status === "in_progress").length, 0)}
+                      sum + shot.tasks.filter((task) => task.status === "queued" || task.status === "in_progress").length, 0)}
                   </p>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-                  <p className="text-xs text-slate-500">已完成素材</p>
+                  <p className="text-xs text-slate-500">{t("completed")}</p>
                   <p className="mt-2 text-3xl font-semibold text-emerald-300">
                     {project.shots.reduce((sum, shot) => sum + shot.assets.length, 0)}
                   </p>
                 </div>
               </div>
               {hasActiveTasks && (
-                <p className="mt-4 text-xs text-indigo-300 animate-pulse">⏳ 生成中，每3秒自动刷新...</p>
+                <p className="mt-4 text-xs text-indigo-300 animate-pulse">{t("generating_pulse")}</p>
               )}
               {hasAssets && !hasActiveTasks && (
-                <p className="mt-4 text-xs text-emerald-400">✅ 生成完成，前往下一步审核素材</p>
+                <p className="mt-4 text-xs text-emerald-400">{t("batchDone")}</p>
               )}
             </div>
 
-            {/* 每个镜头任务状态 + 失败重试 */}
             <div className="space-y-3">
               {project.shots.map((shot) => {
                 const latestTask = shot.tasks[0];
@@ -554,7 +557,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-white truncate">Shot {shot.sequence} · {shot.title}</p>
                       {isFailed && (
-                        <p className="mt-0.5 text-xs text-rose-300">{latestTask.errorMessage || "生成失败"}</p>
+                        <p className="mt-0.5 text-xs text-rose-300">{latestTask.errorMessage || t("exportFailed")}</p>
                       )}
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
@@ -565,7 +568,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
                         isRunning ? "bg-indigo-400/20 text-indigo-300" :
                         "bg-white/10 text-slate-400"
                       ].join(" ")}>
-                        {isFailed ? "失败" : hasAsset ? "✓ 完成" : isRunning ? "生成中..." : "待生成"}
+                        {isFailed ? t("failed") : hasAsset ? t("done") : isRunning ? t("inProgressStatus") : t("pending")}
                       </span>
                       {isFailed && latestTask && (
                         <button
@@ -573,7 +576,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
                           disabled={retryingTaskId === latestTask.id}
                           className="rounded-full border border-rose-400/30 px-3 py-1 text-xs text-rose-200 hover:bg-rose-400/10 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {retryingTaskId === latestTask.id ? "重试中..." : "重试"}
+                          {retryingTaskId === latestTask.id ? t("retrying") : t("retry")}
                         </button>
                       )}
                     </div>
@@ -591,7 +594,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
               <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Step 7</p>
-                  <h2 className="mt-2 text-2xl font-semibold text-white">审核与导出</h2>
+                  <h2 className="mt-2 text-2xl font-semibold text-white">{t("reviewTitle")}</h2>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {(["zip", "csv", "txt"] as const).map((format) => (
@@ -602,15 +605,15 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
                       disabled={!!loadingAction}
                     >
                       {loadingAction === `export-${format}`
-                        ? (format === "zip" ? "打包中，请稍候..." : "导出中...")
-                        : `导出 ${format.toUpperCase()}`}
+                        ? (format === "zip" ? t("exportZipPacking") : t("exporting"))
+                        : `Export ${format.toUpperCase()}`}
                     </button>
                   ))}
                 </div>
               </div>
               {Object.entries(exportLinks).map(([format, url]) => (
                 <a key={format} href={url} className="mb-3 block rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
-                  ⬇ 下载 {format.toUpperCase()} 文件
+                  {t("downloadFile", { format: format.toUpperCase() })}
                 </a>
               ))}
             </div>
@@ -691,7 +694,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
           disabled={currentStep === 1}
           className="rounded-full border border-white/10 px-5 py-2 text-sm text-white disabled:opacity-30 cursor-pointer"
         >
-          ← 上一步
+          {t("prevStep")}
         </button>
         <span className="text-xs text-slate-500">{currentStep} / {TOTAL_STEPS}</span>
         <button
@@ -699,7 +702,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
           disabled={currentStep === TOTAL_STEPS || !canGoNext[currentStep]}
           className="rounded-full bg-indigo-400 px-5 py-2 text-sm font-semibold text-slate-950 disabled:opacity-30 cursor-pointer"
         >
-          下一步 →
+          {t("nextStep")}
         </button>
       </div>
     </div>

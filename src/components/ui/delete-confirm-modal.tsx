@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 type DeleteConfirmModalProps = {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export function DeleteConfirmModal({
 }: DeleteConfirmModalProps) {
   const [inputValue, setInputValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const t = useTranslations("deleteModal");
 
   const isMatch = inputValue === projectName;
 
@@ -68,15 +70,17 @@ export function DeleteConfirmModal({
         </div>
 
         <h3 className="mb-2 text-center text-lg font-semibold text-white">
-          删除项目
+          {t("title")}
         </h3>
 
         <p className="mb-1 text-center text-sm text-slate-300">
-          此操作不可撤销，将永久删除项目及所有相关数据。
+          {t("warning")}
         </p>
 
         <p className="mb-4 text-center text-sm text-slate-400">
-          请输入项目名称 <span className="font-bold text-white">{projectName}</span> 以确认删除。
+          {t.rich("confirmHint", {
+            name: () => <span className="font-bold text-white">{projectName}</span>,
+          })}
         </p>
 
         <input
@@ -84,7 +88,7 @@ export function DeleteConfirmModal({
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          placeholder="请输入项目名称以确认"
+          placeholder={t("placeholder")}
           disabled={loading}
           className="mb-4 w-full rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:border-red-400/50 disabled:opacity-50"
         />
@@ -95,14 +99,14 @@ export function DeleteConfirmModal({
             disabled={loading}
             className="flex-1 rounded-xl border border-white/10 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/5 disabled:opacity-50 cursor-pointer"
           >
-            取消
+            {t("cancel")}
           </button>
           <button
             onClick={onConfirm}
             disabled={!isMatch || loading}
             className="flex-1 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
           >
-            {loading ? "删除中..." : "确认删除"}
+            {loading ? t("deleting") : t("confirm")}
           </button>
         </div>
       </div>

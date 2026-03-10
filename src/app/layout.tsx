@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getLocale, getMessages } from "next-intl/server";
+import { NextIntlClientProvider } from "next-intl";
 
 import { getSession } from "@/lib/auth";
 import { UserMenu } from "@/components/ui/user-menu";
@@ -17,24 +19,30 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await getSession();
+  const locale = await getLocale();
+  const messages = await getMessages();
 
   return (
-    <html lang="zh-CN">
+    <html lang={locale}>
       <body>
-        <div className="mx-auto min-h-screen max-w-7xl px-6 py-8">
-          <header className="mb-8 flex items-center justify-between rounded-3xl border border-white/10 bg-white/5 px-6 py-4 backdrop-blur">
-            <Link href="/projects" className="text-xl font-semibold tracking-wide text-white">
-              StoryForge AI
-            </Link>
-            <div className="flex items-center gap-4">
-              <p className="text-sm text-slate-300">
-                面向 faceless YouTube 工作流的内部 MVP
-              </p>
-              {session && <UserMenu email={session.email} role={session.role} />}
-            </div>
-          </header>
-          {children}
-        </div>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <div className="mx-auto min-h-screen max-w-7xl px-6 py-8">
+            <header className="mb-8 flex items-center justify-between rounded-3xl border border-white/10 bg-white/5 px-6 py-4 backdrop-blur">
+              <Link href="/projects" className="text-xl font-semibold tracking-wide text-white">
+                StoryForge AI
+              </Link>
+              <div className="flex items-center gap-4">
+                <p className="text-sm text-slate-300">
+                  {locale === "zh"
+                    ? "面向 faceless YouTube 工作流的内部 MVP"
+                    : "Internal MVP for faceless YouTube workflow"}
+                </p>
+                {session && <UserMenu email={session.email} role={session.role} />}
+              </div>
+            </header>
+            {children}
+          </div>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 
 type InviteCode = {
   id: string;
@@ -17,6 +18,7 @@ export default function InviteCodesPage() {
   const [genCount, setGenCount] = useState(5);
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const t = useTranslations("admin");
 
   const fetchCodes = useCallback(async () => {
     const res = await fetch("/api/admin/invite-codes");
@@ -56,19 +58,19 @@ export default function InviteCodesPage() {
   }
 
   function getStatus(item: InviteCode) {
-    if (item.disabled) return { label: "已作废", color: "text-slate-500" };
-    if (item.usedBy) return { label: "已使用", color: "text-emerald-400" };
-    return { label: "未使用", color: "text-amber-400" };
+    if (item.disabled) return { label: t("statusDisabled"), color: "text-slate-500" };
+    if (item.usedBy) return { label: t("statusUsed"), color: "text-emerald-400" };
+    return { label: t("statusUnused"), color: "text-amber-400" };
   }
 
   if (loading) {
-    return <p className="text-slate-400">加载中...</p>;
+    return <p className="text-slate-400">{t("loading")}</p>;
   }
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-white">邀请码管理</h1>
+        <h1 className="text-2xl font-semibold text-white">{t("inviteCodesTitle")}</h1>
         <div className="flex items-center gap-3">
           <input
             type="number"
@@ -83,7 +85,7 @@ export default function InviteCodesPage() {
             disabled={generating}
             className="rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-400 disabled:opacity-50"
           >
-            {generating ? "生成中..." : "生成邀请码"}
+            {generating ? t("generating") : t("generate")}
           </button>
         </div>
       </div>
@@ -92,11 +94,11 @@ export default function InviteCodesPage() {
         <table className="w-full text-left text-sm">
           <thead className="border-b border-white/10 bg-white/5">
             <tr>
-              <th className="px-4 py-3 font-medium text-slate-400">邀请码</th>
-              <th className="px-4 py-3 font-medium text-slate-400">状态</th>
-              <th className="px-4 py-3 font-medium text-slate-400">使用者</th>
-              <th className="px-4 py-3 font-medium text-slate-400">创建时间</th>
-              <th className="px-4 py-3 font-medium text-slate-400">操作</th>
+              <th className="px-4 py-3 font-medium text-slate-400">{t("colCode")}</th>
+              <th className="px-4 py-3 font-medium text-slate-400">{t("colStatus")}</th>
+              <th className="px-4 py-3 font-medium text-slate-400">{t("colUser")}</th>
+              <th className="px-4 py-3 font-medium text-slate-400">{t("colCreatedAt")}</th>
+              <th className="px-4 py-3 font-medium text-slate-400">{t("colActions")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
@@ -116,14 +118,14 @@ export default function InviteCodesPage() {
                         onClick={() => handleCopy(item.code)}
                         className="rounded-md px-2 py-1 text-xs text-slate-400 hover:bg-white/10 hover:text-white"
                       >
-                        {copied === item.code ? "已复制" : "复制"}
+                        {copied === item.code ? t("copied") : t("copy")}
                       </button>
                       {!item.usedBy && !item.disabled && (
                         <button
                           onClick={() => handleDisable(item.code)}
                           className="rounded-md px-2 py-1 text-xs text-rose-400 hover:bg-rose-500/10"
                         >
-                          作废
+                          {t("disable")}
                         </button>
                       )}
                     </div>
@@ -134,7 +136,7 @@ export default function InviteCodesPage() {
           </tbody>
         </table>
         {codes.length === 0 && (
-          <p className="px-4 py-8 text-center text-slate-500">暂无邀请码</p>
+          <p className="px-4 py-8 text-center text-slate-500">{t("noCodes")}</p>
         )}
       </div>
     </div>

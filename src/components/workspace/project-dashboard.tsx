@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 
 import { DeleteConfirmModal } from "@/components/ui/delete-confirm-modal";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -21,6 +22,7 @@ export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const defaultPreset = useMemo(() => projectPresets[0], []);
+  const t = useTranslations("dashboard");
 
   async function handleCreateProject(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -46,7 +48,7 @@ export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
     });
 
     setLoading(false);
-    if (response.status === 401) { alert("登录已过期，请重新登录"); router.push("/login"); return; }
+    if (response.status === 401) { alert(t("authExpired")); router.push("/login"); return; }
     if (!response.ok) return;
     const project = (await response.json()) as Project;
     setProjects((current) => [project, ...current]);
@@ -55,7 +57,7 @@ export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
 
   async function handleDuplicate(projectId: string) {
     const response = await fetch(`/api/projects/${projectId}/duplicate`, { method: "POST" });
-    if (response.status === 401) { alert("登录已过期，请重新登录"); router.push("/login"); return; }
+    if (response.status === 401) { alert(t("authExpired")); router.push("/login"); return; }
     if (!response.ok) return;
     const project = (await response.json()) as Project;
     setProjects((current) => [project, ...current]);
@@ -66,7 +68,7 @@ export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
     setDeleteLoading(true);
     const response = await fetch(`/api/projects/${deleteTarget.id}`, { method: "DELETE" });
     setDeleteLoading(false);
-    if (response.status === 401) { alert("登录已过期，请重新登录"); router.push("/login"); return; }
+    if (response.status === 401) { alert(t("authExpired")); router.push("/login"); return; }
     if (!response.ok) return;
     setProjects((current) => current.filter((p) => p.id !== deleteTarget.id));
     setDeleteTarget(null);
@@ -83,14 +85,14 @@ export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
       <section className="rounded-[2rem] border border-white/10 bg-white/5 p-8 backdrop-blur">
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-indigo-300">MVP Control Room</p>
-            <h1 className="mt-3 text-4xl font-semibold text-white">新建创作项目</h1>
+            <p className="text-xs uppercase tracking-[0.3em] text-indigo-300">{t("badge")}</p>
+            <h1 className="mt-3 text-4xl font-semibold text-white">{t("createTitle")}</h1>
           </div>
           <button
             className="rounded-full border border-white/10 px-4 py-2 text-sm text-slate-200 cursor-pointer"
             onClick={handleLogout}
           >
-            退出
+            {t("logout")}
           </button>
         </div>
 
@@ -98,7 +100,7 @@ export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
           <input
             name="title"
             defaultValue="Things I Had to Understand - Episode 01"
-            placeholder="项目标题"
+            placeholder={t("titlePlaceholder")}
             className="rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3"
           />
           <textarea
@@ -147,20 +149,20 @@ export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
             disabled={loading}
             className="rounded-2xl bg-indigo-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-indigo-300 disabled:opacity-60 cursor-pointer"
           >
-            {loading ? "创建中..." : "创建项目并进入工作台"}
+            {loading ? t("creating") : t("createSubmit")}
           </button>
         </form>
       </section>
 
       <section className="rounded-[2rem] border border-white/10 bg-slate-950/60 p-8">
         <div className="mb-6">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Projects</p>
-          <h2 className="mt-3 text-3xl font-semibold text-white">最近项目</h2>
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{t("recentBadge")}</p>
+          <h2 className="mt-3 text-3xl font-semibold text-white">{t("recentTitle")}</h2>
         </div>
         <div className="space-y-4">
           {projects.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-white/10 p-8 text-slate-400">
-              还没有项目，先创建一个。
+              {t("noProjects")}
             </div>
           ) : (
             projects.map((project) => (
@@ -182,16 +184,16 @@ export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
                 </div>
                 <div className="mt-5 flex flex-wrap gap-3">
                   <Link href={`/projects/${project.id}`} className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950">
-                    打开工作台
+                    {t("open")}
                   </Link>
                   <button className="rounded-full border border-white/10 px-4 py-2 text-sm text-white cursor-pointer" onClick={() => handleDuplicate(project.id)}>
-                    复制项目
+                    {t("duplicate")}
                   </button>
                   <button
                     className="rounded-full border border-red-500/30 px-4 py-2 text-sm text-red-400 transition hover:bg-red-500/10 cursor-pointer"
                     onClick={() => setDeleteTarget({ id: project.id, title: project.title })}
                   >
-                    删除
+                    {t("delete")}
                   </button>
                 </div>
               </div>
