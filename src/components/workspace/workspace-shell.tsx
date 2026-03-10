@@ -41,6 +41,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
     async (syncTasks = false) => {
       const url = syncTasks ? `/api/projects/${project.id}/tasks` : `/api/projects/${project.id}`;
       const response = await fetch(url, { cache: "no-store" });
+      if (response.status === 401) { alert("登录已过期，请重新登录"); window.location.href = "/login"; return; }
       if (!response.ok) return;
       const nextProject = (await response.json()) as Project;
       setProject(nextProject);
@@ -57,10 +58,16 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
     return () => window.clearInterval(timer);
   }, [hasActiveTasks, refreshProject]);
 
+  function handleUnauthorized() {
+    alert("登录已过期，请重新登录");
+    window.location.href = "/login";
+  }
+
   async function runAction(action: string, request: () => Promise<Response>) {
     setLoadingAction(action);
     const response = await request();
     setLoadingAction(null);
+    if (response.status === 401) { handleUnauthorized(); return; }
     if (!response.ok) return;
     const nextProject = (await response.json()) as Project;
     setProject(nextProject);
@@ -117,6 +124,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
 
   async function handleApprove(assetId: string) {
     const response = await fetch(`/api/assets/${assetId}/approve`, { method: "PUT" });
+    if (response.status === 401) { handleUnauthorized(); return; }
     if (!response.ok) return;
     const nextProject = (await response.json()) as Project;
     setProject(nextProject);
@@ -126,6 +134,7 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
     setRetryingTaskId(taskId);
     const response = await fetch(`/api/tasks/${taskId}/retry`, { method: "POST" });
     setRetryingTaskId(null);
+    if (response.status === 401) { handleUnauthorized(); return; }
     if (!response.ok) return;
     await refreshProject(true);
   }

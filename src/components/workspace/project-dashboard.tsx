@@ -46,6 +46,7 @@ export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
     });
 
     setLoading(false);
+    if (response.status === 401) { alert("登录已过期，请重新登录"); router.push("/login"); return; }
     if (!response.ok) return;
     const project = (await response.json()) as Project;
     setProjects((current) => [project, ...current]);
@@ -54,6 +55,7 @@ export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
 
   async function handleDuplicate(projectId: string) {
     const response = await fetch(`/api/projects/${projectId}/duplicate`, { method: "POST" });
+    if (response.status === 401) { alert("登录已过期，请重新登录"); router.push("/login"); return; }
     if (!response.ok) return;
     const project = (await response.json()) as Project;
     setProjects((current) => [project, ...current]);
@@ -64,6 +66,7 @@ export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
     setDeleteLoading(true);
     const response = await fetch(`/api/projects/${deleteTarget.id}`, { method: "DELETE" });
     setDeleteLoading(false);
+    if (response.status === 401) { alert("登录已过期，请重新登录"); router.push("/login"); return; }
     if (!response.ok) return;
     setProjects((current) => current.filter((p) => p.id !== deleteTarget.id));
     setDeleteTarget(null);
