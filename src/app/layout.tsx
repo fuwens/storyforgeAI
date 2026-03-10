@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { getSession } from "@/lib/auth";
+import { UserMenu } from "@/components/ui/user-menu";
+
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -8,11 +11,13 @@ export const metadata: Metadata = {
   description: "Internal MVP for faceless YouTube batch image and video generation.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await getSession();
+
   return (
     <html lang="zh-CN">
       <body>
@@ -21,9 +26,12 @@ export default function RootLayout({
             <Link href="/projects" className="text-xl font-semibold tracking-wide text-white">
               StoryForge AI
             </Link>
-            <p className="text-sm text-slate-300">
-              面向 faceless YouTube 工作流的内部 MVP
-            </p>
+            <div className="flex items-center gap-4">
+              <p className="text-sm text-slate-300">
+                面向 faceless YouTube 工作流的内部 MVP
+              </p>
+              {session && <UserMenu email={session.email} role={session.role} />}
+            </div>
           </header>
           {children}
         </div>
