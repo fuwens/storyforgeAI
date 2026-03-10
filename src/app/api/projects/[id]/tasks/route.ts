@@ -47,6 +47,12 @@ export async function POST(
   const now = new Date().toISOString();
 
   for (const shot of project.shots) {
+    // 跳过已有进行中或排队中 task 的 shot，防止重复提交
+    const hasActiveTask = shot.tasks.some(
+      (t) => t.status === "queued" || t.status === "in_progress",
+    );
+    if (hasActiveTask) continue;
+
     const prompts = shot.promptVariants[0];
     const prompt =
       shot.generationType === "image"
