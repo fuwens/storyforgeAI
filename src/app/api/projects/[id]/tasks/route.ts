@@ -3,11 +3,20 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { addTask, getProject, updateTask } from "@/lib/db/store";
 import { syncProjectTasks } from "@/lib/tasks/task-runner";
-import { persistRemoteAsset } from "@/lib/assets/persist";
-import { submitImageTask } from "@/lib/toapis/image-client";
-import { submitVideoTask } from "@/lib/toapis/video-client";
-import type { Asset, GenerationTask } from "@/lib/types";
+import {
+  ensureMediaWorker,
+  ensureSyncWorker,
+  ensureWorker,
+  getMediaQueue,
+  scheduleProjectSync,
+} from "@/lib/queue";
+import type { GenerationTask } from "@/lib/types";
 import { uid } from "@/lib/utils";
+
+// Ensure workers are running whenever this module is loaded in the server process.
+ensureWorker();
+ensureMediaWorker();
+ensureSyncWorker();
 
 export async function GET(
   _request: Request,
@@ -45,6 +54,7 @@ export async function POST(
   }
 
   const now = new Date().toISOString();
+  const mediaQueue = getMediaQueue();
 
   for (const shot of project.shots) {
     // 跳过已有进行中或排队中 task 的 shot，防止重复提交
@@ -60,72 +70,76 @@ export async function POST(
         : prompts?.videoPrompt || shot.sceneDescription;
 
     try {
-      if (shot.generationType === "image") {
-        const submission = await submitImageTask({
-          model: shot.model || "gpt-4o-image",
+      const taskId = uid("task");
+
+      // Create a placeholder task in DB immediately (status: queued)
+      // providerTaskId will be filled in by the worker after actual API submission.
+      const task: GenerationTask = {
+        id: taskId,
+        shotId: shot.id,
+        provider: "mock", // placeholder; updated by worker after real submission
+        providerTaskId: "pending",
+        mediaType: shot.generationType,
+        model: shot.model || (shot.generationType === "image" ? "gpt-4o-image" : "kling-2-6"),
+        requestPayload: {
           prompt,
           negativePrompt: prompts?.negativePrompt,
           aspectRatio: shot.aspectRatio,
-        });
-
-        const task: GenerationTask = {
-          id: uid("task"),
-          shotId: shot.id,
-          provider: submission.provider,
-          providerTaskId: submission.providerTaskId,
-          mediaType: "image",
-          model: shot.model || "gpt-4o-image",
-          requestPayload: { prompt, negativePrompt: prompts?.negativePrompt, aspectRatio: shot.aspectRatio },
-          status: submission.status,
-          createdAt: now,
-          updatedAt: now,
-        };
-
-        await addTask(project.id, shot.id, task);
-
-        if (submission.status === "completed" && submission.resultUrl) {
-          const persisted = await persistRemoteAsset(submission.resultUrl, "image");
-          const asset: Asset = {
-            id: uid("asset"),
-            shotId: shot.id,
-            sourceUrl: persisted.sourceUrl,
-            storageUrl: persisted.storageUrl,
-            mimeType: persisted.mimeType,
-            approved: false,
-            createdAt: now,
-            updatedAt: now,
-          };
-          await updateTask(task.id, { status: "completed", sourceUrl: persisted.sourceUrl, storageUrl: persisted.storageUrl }, asset);
-        }
-      } else {
-        const submission = await submitVideoTask({
-          model: shot.model || "kling-2-6",
-          prompt,
-          aspectRatio: shot.aspectRatio,
           duration: shot.durationSeconds,
           modelConfig: shot.modelConfig,
-        });
+        },
+        status: "queued",
+        createdAt: now,
+        updatedAt: now,
+      };
 
-        const task: GenerationTask = {
-          id: uid("task"),
+      await addTask(project.id, shot.id, task);
+
+      // Enqueue the actual generation job
+      await mediaQueue.add(
+        "generate",
+        {
+          taskId,
           shotId: shot.id,
-          provider: submission.provider,
-          providerTaskId: submission.providerTaskId,
-          mediaType: "video",
-          model: shot.model || "kling-2-6",
-          requestPayload: { prompt, aspectRatio: shot.aspectRatio, duration: shot.durationSeconds, modelConfig: shot.modelConfig },
-          status: submission.status,
-          createdAt: now,
-          updatedAt: now,
-        };
-
-        await addTask(project.id, shot.id, task);
-      }
+          projectId: project.id,
+          mediaType: shot.generationType,
+          prompt,
+          negativePrompt: prompts?.negativePrompt,
+          aspectRatio: shot.aspectRatio,
+          duration: shot.durationSeconds,
+          model: shot.model || (shot.generationType === "image" ? "gpt-4o-image" : "kling-2-6"),
+          modelConfig: shot.modelConfig,
+        },
+        {
+          attempts: 3,
+          backoff: { type: "exponential", delay: 5000 },
+          removeOnComplete: true,
+          removeOnFail: false,
+        },
+      );
     } catch (err) {
-      console.error(`Shot ${shot.id} task submission failed:`, err);
+      // Log and continue — one shot failure must not block others
+      console.error(`[POST /tasks] Shot ${shot.id} enqueue failed:`, err);
+
+      // Mark the task as failed if it was partially created
+      const failedTask = shot.tasks.find(
+        (t) => t.status === "queued" || t.status === "in_progress",
+      );
+      if (failedTask) {
+        await updateTask(failedTask.id, {
+          status: "failed",
+          errorMessage: err instanceof Error ? err.message : "Failed to enqueue",
+        }).catch(() => {}); // best-effort
+      }
     }
   }
 
-  const refreshed = await syncProjectTasks(project.id);
-  return NextResponse.json(refreshed);
+  // Schedule periodic sync for this project so in-progress video tasks get polled.
+  await scheduleProjectSync(project.id).catch((err) => {
+    console.error("[POST /tasks] scheduleProjectSync failed:", err);
+  });
+
+  // Return immediately with current project state (workers handle actual generation).
+  const refreshed = await getProject(project.id, session.userId);
+  return NextResponse.json(refreshed ?? project);
 }

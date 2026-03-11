@@ -329,6 +329,8 @@ export async function updateTask(
       sourceUrl: patch.sourceUrl,
       storageUrl: patch.storageUrl,
       expiresAt: patch.expiresAt ? new Date(patch.expiresAt) : undefined,
+      ...(patch.providerTaskId !== undefined && { providerTaskId: patch.providerTaskId }),
+      ...(patch.provider !== undefined && { provider: patch.provider }),
     },
   });
 
