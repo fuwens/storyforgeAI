@@ -156,9 +156,11 @@
   },
   "admin": {
     "title": "Admin",
+    "groupUsers": "Users",
+    "groupOps": "Operations",
     "inviteCodes": "Invite Codes",
-    "users": "Users",
-    "cleanup": "File Cleanup",
+    "users": "User List",
+    "cleanup": "Disk Cleanup",
     "queues": "Queue Monitor",
     "backToMain": "← Back to App",
     "inviteCodesTitle": "Invite Code Management",
