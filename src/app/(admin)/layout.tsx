@@ -29,6 +29,8 @@ export default async function AdminLayout({
         <nav className="space-y-1">
           <NavLink href="/admin/invite-codes">{t("inviteCodes")}</NavLink>
           <NavLink href="/admin/users">{t("users")}</NavLink>
+          <NavLink href="/admin/cleanup">{t("cleanup")}</NavLink>
+          <NavLink href="/admin/queues">{t("queues")}</NavLink>
         </nav>
         <div className="mt-8 border-t border-white/10 pt-4">
           <Link

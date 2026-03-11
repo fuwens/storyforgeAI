@@ -18,8 +18,9 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id } = await params;
-  const body = (await request.json()) as { format?: "zip" | "csv" | "txt" };
+  const body = (await request.json()) as { format?: "zip" | "csv" | "txt"; shotIds?: string[] };
   const format = body.format || "zip";
+  const shotIds = body.shotIds;
 
   const project = await getProject(id, session.userId);
   if (!project) {
@@ -32,7 +33,13 @@ export async function POST(
     const fileName = format === "csv"
       ? `${project.id}-shots.csv`
       : `${project.id}-script.txt`;
-    const content = format === "csv" ? buildCsv(project) : buildTxt(project);
+
+    // Filter project shots if shotIds provided
+    const filteredProject = shotIds?.length
+      ? { ...project, shots: project.shots.filter((s) => shotIds.includes(s.id)) }
+      : project;
+
+    const content = format === "csv" ? buildCsv(filteredProject) : buildTxt(filteredProject);
     const buffer = Buffer.from(content, "utf8");
 
     const fs = await import("node:fs/promises");
@@ -83,11 +90,11 @@ export async function POST(
   await createJob({
     id: jobId,
     type: "export_zip",
-    payload: { type: "export_zip", projectId: project.id, fileName },
+    payload: { type: "export_zip", projectId: project.id, fileName, shotIds },
   });
 
   const queue = getQueue();
-  await queue.add("export_zip", { type: "export_zip", projectId: project.id, fileName }, {
+  await queue.add("export_zip", { type: "export_zip", projectId: project.id, fileName, shotIds }, {
     jobId,
     attempts: 2,
     backoff: { type: "exponential", delay: 5000 },

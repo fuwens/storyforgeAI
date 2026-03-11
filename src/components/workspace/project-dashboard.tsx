@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { DeleteConfirmModal } from "@/components/ui/delete-confirm-modal";
 import { StatusPill } from "@/components/ui/status-pill";
 import { projectPresets } from "@/lib/toapis/config";
+import { projectTemplates } from "@/lib/templates";
 import type { Project } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 
@@ -42,6 +43,25 @@ export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const defaultPreset = useMemo(() => projectPresets[0], []);
   const t = useTranslations("dashboard");
+
+  // Template & form state
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [topicValue, setTopicValue] = useState("为什么很多理解都来得太晚？我想做一个 faceless 叙述型视频，用安静、隐喻、略带不安的视觉讲这个主题。");
+  const [styleTagsValue, setStyleTagsValue] = useState(defaultPreset.styleTags.join(", "));
+  const [targetDurationValue, setTargetDurationValue] = useState("60s");
+  const [languageValue, setLanguageValue] = useState("English");
+  const [platformValue, setPlatformValue] = useState("YouTube");
+
+  function applyTemplate(key: string) {
+    const tpl = projectTemplates.find((t) => t.key === key);
+    if (!tpl) return;
+    setSelectedTemplate(key);
+    setTopicValue(tpl.topic);
+    setStyleTagsValue(tpl.styleTags.join(", "));
+    setTargetDurationValue(tpl.targetDuration);
+    setLanguageValue(tpl.language);
+    setPlatformValue(tpl.platform);
+  }
   const tShot = useTranslations("shotCard");
 
   async function handleCreateProject(event: FormEvent<HTMLFormElement>) {
@@ -117,6 +137,29 @@ export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
         </div>
 
         <form className="grid gap-4" onSubmit={handleCreateProject}>
+          {/* Template selector */}
+          <div>
+            <p className="mb-2 text-xs text-slate-500">{t("templateLabel")}</p>
+            <div className="flex flex-wrap gap-2">
+              {projectTemplates.map((tpl) => (
+                <button
+                  key={tpl.key}
+                  type="button"
+                  onClick={() => applyTemplate(tpl.key)}
+                  className={[
+                    "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition cursor-pointer",
+                    selectedTemplate === tpl.key
+                      ? "border-indigo-400 bg-indigo-400/20 text-indigo-200"
+                      : "border-white/10 text-slate-300 hover:border-white/20 hover:text-white",
+                  ].join(" ")}
+                >
+                  <span>{tpl.emoji}</span>
+                  <span>{tpl.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <input
             name="title"
             defaultValue="Things I Had to Understand - Episode 01"
@@ -126,7 +169,8 @@ export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
           <textarea
             name="topic"
             rows={5}
-            defaultValue="为什么很多理解都来得太晚？我想做一个 faceless 叙述型视频，用安静、隐喻、略带不安的视觉讲这个主题。"
+            value={topicValue}
+            onChange={(e) => setTopicValue(e.target.value)}
             className="rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3"
           />
           <div className="grid gap-4 md:grid-cols-2">
@@ -143,22 +187,38 @@ export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
             </select>
             <input
               name="styleTags"
-              defaultValue={defaultPreset.styleTags.join(", ")}
+              value={styleTagsValue}
+              onChange={(e) => setStyleTagsValue(e.target.value)}
               className="rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3"
             />
           </div>
           <div className="grid gap-4 md:grid-cols-3">
-            <select name="targetDuration" defaultValue="60s" className="rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3">
+            <select
+              name="targetDuration"
+              value={targetDurationValue}
+              onChange={(e) => setTargetDurationValue(e.target.value)}
+              className="rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3"
+            >
               <option value="30s">30s</option>
               <option value="60s">60s</option>
               <option value="90s">90s</option>
               <option value="3min">3min</option>
             </select>
-            <select name="language" defaultValue="English" className="rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3">
+            <select
+              name="language"
+              value={languageValue}
+              onChange={(e) => setLanguageValue(e.target.value)}
+              className="rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3"
+            >
               <option value="English">English</option>
               <option value="中文">中文</option>
             </select>
-            <select name="platform" defaultValue="YouTube" className="rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3">
+            <select
+              name="platform"
+              value={platformValue}
+              onChange={(e) => setPlatformValue(e.target.value)}
+              className="rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3"
+            >
               <option value="YouTube">YouTube</option>
               <option value="TikTok">TikTok</option>
               <option value="Instagram Reels">Instagram Reels</option>

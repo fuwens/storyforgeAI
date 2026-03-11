@@ -54,7 +54,8 @@
     "open": "Open Workspace",
     "duplicate": "Duplicate",
     "delete": "Delete",
-    "authExpired": "Session expired, please sign in again"
+    "authExpired": "Session expired, please sign in again",
+    "templateLabel": "Quick Templates"
   },
   "workspace": {
     "authExpired": "Session expired, please sign in again",
@@ -108,6 +109,10 @@
     "exportZipPacking": "Packing, please wait...",
     "exporting": "Exporting...",
     "downloadFile": "⬇ Download {format} file",
+    "exportSelectShots": "Select shots to export",
+    "selectAll": "Select All",
+    "selectNone": "Select None",
+    "exportSelected": "{count} of {total} shots selected",
     "prevStep": "← Previous",
     "nextStep": "Next →",
     "exportFailed": "Export failed",
@@ -153,6 +158,8 @@
     "title": "Admin",
     "inviteCodes": "Invite Codes",
     "users": "Users",
+    "cleanup": "File Cleanup",
+    "queues": "Queue Monitor",
     "backToMain": "← Back to App",
     "inviteCodesTitle": "Invite Code Management",
     "generate": "Generate Codes",
@@ -184,5 +191,39 @@
     "resetPasswordHint": "Copy this password and send it to the user. It won't be shown again after closing.",
     "copyPassword": "Copy Password",
     "close": "Close"
+  },
+  "adminCleanup": {
+    "badge": "Storage",
+    "title": "File Cleanup",
+    "subtitle": "Clean up files in public/generated/ that are older than 30 days and not referenced by approved assets",
+    "statsTitle": "Directory Stats",
+    "fileCount": "File Count",
+    "diskUsage": "Disk Usage",
+    "loading": "Loading...",
+    "cleanupTitle": "Run Cleanup",
+    "cleanupDesc": "Delete files older than 30 days that are not referenced by any approved asset, and set the corresponding Asset storageUrl to null.",
+    "cleanupBtn": "Run Cleanup Now",
+    "cleaning": "Cleaning...",
+    "resultTitle": "Cleanup Result",
+    "scanned": "Scanned",
+    "deleted": "Deleted",
+    "freed": "Space Freed",
+    "skipped": "Skipped",
+    "errors": "Errors"
+  },
+  "adminQueues": {
+    "badge": "BullMQ",
+    "title": "Queue Monitor",
+    "subtitle": "Real-time BullMQ queue status, auto-refreshes every 5 seconds",
+    "loading": "Loading...",
+    "waiting": "Waiting",
+    "active": "Active",
+    "completed": "Completed",
+    "failed": "Failed",
+    "delayed": "Delayed",
+    "showJobs": "Show Jobs",
+    "hideJobs": "Hide",
+    "recentJobs": "Recent Jobs",
+    "noJobs": "No jobs found"
   }
 }

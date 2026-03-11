@@ -54,7 +54,8 @@
     "open": "打开工作台",
     "duplicate": "复制项目",
     "delete": "删除",
-    "authExpired": "登录已过期，请重新登录"
+    "authExpired": "登录已过期，请重新登录",
+    "templateLabel": "快速模板"
   },
   "workspace": {
     "authExpired": "登录已过期，请重新登录",
@@ -108,6 +109,10 @@
     "exportZipPacking": "打包中，请稍候...",
     "exporting": "导出中...",
     "downloadFile": "⬇ 下载 {format} 文件",
+    "exportSelectShots": "选择要导出的镜头",
+    "selectAll": "全选",
+    "selectNone": "全不选",
+    "exportSelected": "已选 {count} / 共 {total} 个镜头",
     "prevStep": "← 上一步",
     "nextStep": "下一步 →",
     "exportFailed": "导出失败",
@@ -153,6 +158,8 @@
     "title": "Admin",
     "inviteCodes": "邀请码",
     "users": "用户管理",
+    "cleanup": "文件清理",
+    "queues": "队列监控",
     "backToMain": "← 返回主站",
     "inviteCodesTitle": "邀请码管理",
     "generate": "生成邀请码",
@@ -184,5 +191,39 @@
     "resetPasswordHint": "请复制此密码并发送给用户，此窗口关闭后无法再次查看。",
     "copyPassword": "复制密码",
     "close": "关闭"
+  },
+  "adminCleanup": {
+    "badge": "Storage",
+    "title": "文件清理",
+    "subtitle": "清理 public/generated/ 目录中超过 30 天且未被 approved 素材引用的文件",
+    "statsTitle": "目录统计",
+    "fileCount": "文件数量",
+    "diskUsage": "占用空间",
+    "loading": "加载中...",
+    "cleanupTitle": "立即清理",
+    "cleanupDesc": "删除超过 30 天且未被任何已 approved 素材引用的文件，并将对应 Asset 记录的 storageUrl 置空。",
+    "cleanupBtn": "立即清理",
+    "cleaning": "清理中...",
+    "resultTitle": "清理结果",
+    "scanned": "扫描文件",
+    "deleted": "已删除",
+    "freed": "释放空间",
+    "skipped": "已跳过",
+    "errors": "错误"
+  },
+  "adminQueues": {
+    "badge": "BullMQ",
+    "title": "队列监控",
+    "subtitle": "实时查看 BullMQ 队列状态，每 5 秒自动刷新",
+    "loading": "加载中...",
+    "waiting": "等待",
+    "active": "进行中",
+    "completed": "已完成",
+    "failed": "失败",
+    "delayed": "延迟",
+    "showJobs": "查看任务",
+    "hideJobs": "收起",
+    "recentJobs": "近期任务",
+    "noJobs": "暂无任务"
   }
 }

@@ -124,6 +124,26 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
   }
 
   const [retryingTaskId, setRetryingTaskId] = useState<string | null>(null);
+  const [selectedShotIds, setSelectedShotIds] = useState<Set<string>>(
+    () => new Set(initialProject.shots.map((s) => s.id)),
+  );
+
+  // Keep selectedShotIds in sync when shots change (new shots added, etc.)
+  useEffect(() => {
+    setSelectedShotIds((prev) => {
+      const currentIds = new Set(project.shots.map((s) => s.id));
+      const next = new Set(prev);
+      // Add any new shots as selected by default
+      for (const id of currentIds) {
+        if (!next.has(id)) next.add(id);
+      }
+      // Remove any shots that no longer exist
+      for (const id of next) {
+        if (!currentIds.has(id)) next.delete(id);
+      }
+      return next;
+    });
+  }, [project.shots]);
 
   async function handleApprove(assetId: string) {
     const response = await fetch(`/api/assets/${assetId}/approve`, { method: "PUT" });
@@ -174,10 +194,11 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
 
   async function handleExport(format: "zip" | "csv" | "txt") {
     setLoadingAction(`export-${format}`);
+    const shotIds = Array.from(selectedShotIds);
     const response = await fetch(`/api/projects/${project.id}/export`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ format }),
+      body: JSON.stringify({ format, shotIds }),
     });
     if (!response.ok) {
       setLoadingAction(null);
@@ -611,6 +632,76 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
                   ))}
                 </div>
               </div>
+
+              {/* Shot selection */}
+              <div className="mb-4 rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+                <div className="mb-3 flex items-center justify-between gap-4">
+                  <p className="text-sm font-medium text-white">{t("exportSelectShots")}</p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedShotIds(new Set(project.shots.map((s) => s.id)))}
+                      className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-400 hover:text-white cursor-pointer"
+                    >
+                      {t("selectAll")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedShotIds(new Set())}
+                      className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-400 hover:text-white cursor-pointer"
+                    >
+                      {t("selectNone")}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {project.shots.map((shot) => {
+                    const isChecked = selectedShotIds.has(shot.id);
+                    const approvedAsset = shot.assets.find((a) => a.approved);
+                    const anyAsset = shot.assets[0];
+                    const thumbUrl = (approvedAsset ?? anyAsset)?.storageUrl || null;
+                    return (
+                      <label
+                        key={shot.id}
+                        className={[
+                          "flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 transition",
+                          isChecked ? "border-indigo-400/30 bg-indigo-400/5" : "border-white/5 bg-white/5 opacity-60",
+                        ].join(" ")}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            setSelectedShotIds((prev) => {
+                              const next = new Set(prev);
+                              if (e.target.checked) next.add(shot.id);
+                              else next.delete(shot.id);
+                              return next;
+                            });
+                          }}
+                          className="h-4 w-4 rounded accent-indigo-400"
+                        />
+                        {thumbUrl && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={thumbUrl}
+                            alt=""
+                            className="h-8 w-14 rounded object-cover"
+                          />
+                        )}
+                        <span className="min-w-0 flex-1 text-sm text-white truncate">
+                          <span className="text-slate-400">Shot {shot.sequence} · </span>
+                          {shot.title}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  {t("exportSelected", { count: selectedShotIds.size, total: project.shots.length })}
+                </p>
+              </div>
+
               {Object.entries(exportLinks).map(([format, url]) => (
                 <a key={format} href={url} className="mb-3 block rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
                   {t("downloadFile", { format: format.toUpperCase() })}

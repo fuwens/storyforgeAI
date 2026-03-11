@@ -12,12 +12,18 @@ export async function exportZipProcessor(data: {
   type: string;
   projectId: string;
   fileName: string;
+  shotIds?: string[];
 }): Promise<{ downloadUrl: string }> {
-  const { projectId, fileName } = data;
+  const { projectId, fileName, shotIds } = data;
   const project = await getProject(projectId);
   if (!project) throw new Error("Project not found");
 
-  const buffer = await buildZip(project);
+  // Filter shots if shotIds provided
+  const filteredProject = shotIds?.length
+    ? { ...project, shots: project.shots.filter((s) => shotIds.includes(s.id)) }
+    : project;
+
+  const buffer = await buildZip(filteredProject);
 
   const outputDir = path.join(process.cwd(), "public", "generated");
   await fs.mkdir(outputDir, { recursive: true });
