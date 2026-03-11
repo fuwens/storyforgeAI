@@ -122,10 +122,27 @@ async function queryProject(projectId: string) {
 }
 
 export async function listProjects(userId: string): Promise<Project[]> {
+  // Use the full projectInclude so the Project type is satisfied, but also
+  // fetch a lightweight cover asset (first approved asset of the first shot).
   const rows = await prisma.project.findMany({
     where: { userId },
     orderBy: { updatedAt: "desc" },
-    include: projectInclude,
+    include: {
+      ...projectInclude,
+      shots: {
+        take: 1,
+        orderBy: { sequence: "asc" as const },
+        include: {
+          promptVariants: { orderBy: { createdAt: "desc" as const } },
+          generationTasks: { orderBy: { createdAt: "desc" as const } },
+          assets: {
+            where: { approved: true },
+            take: 1,
+            orderBy: { createdAt: "asc" as const },
+          },
+        },
+      },
+    },
   });
   return rows.map(toProject);
 }

@@ -41,8 +41,43 @@ export function ShotCard({ shot, onApprove, onRetry, retryingTaskId, onPromptUpd
     }
   }
 
+  // Pick preview asset: prefer approved, fall back to first available
+  const previewAsset = shot.assets.find((a) => a.approved) ?? shot.assets[0] ?? null;
+  const previewUrl = previewAsset ? (previewAsset.storageUrl ?? previewAsset.sourceUrl) : null;
+  const isPreviewVideo = previewAsset?.mimeType.startsWith("video/") ?? false;
+  const isPreviewImage = previewAsset?.mimeType.startsWith("image/") ?? false;
+
   return (
-    <article className="rounded-3xl border border-white/10 bg-white/5 p-5">
+    <article className="rounded-3xl border border-white/10 bg-white/5 overflow-hidden">
+      {/* Thumbnail strip */}
+      <div className="h-[120px] w-full overflow-hidden bg-slate-900">
+        {previewUrl && isPreviewImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={previewUrl}
+            alt={shot.title}
+            className="h-full w-full object-cover"
+          />
+        ) : previewUrl && isPreviewVideo ? (
+          <video
+            src={previewUrl}
+            muted
+            autoPlay
+            loop
+            playsInline
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center gap-2 text-slate-600">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 3h18M3 3v18M3 3l18 18" />
+            </svg>
+            <span className="text-xs text-slate-500">{t("noAsset")}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="p-5">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Shot {shot.sequence}</p>
@@ -203,6 +238,7 @@ export function ShotCard({ shot, onApprove, onRetry, retryingTaskId, onPromptUpd
       {approvedAsset ? (
         <p className="mt-4 text-xs uppercase tracking-[0.25em] text-emerald-300">Approved Asset Ready</p>
       ) : null}
+      </div>
     </article>
   );
 }

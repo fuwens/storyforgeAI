@@ -136,7 +136,9 @@
     "approve": "Approve",
     "taskFailed": "Task failed",
     "retrying": "Retrying...",
-    "retry": "Retry"
+    "retry": "Retry",
+    "noAsset": "No asset yet",
+    "coverAlt": "Project cover"
   },
   "stepNav": {
     "step1": "1. Topic",

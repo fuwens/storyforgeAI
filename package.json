@@ -20,6 +20,8 @@
   "license": "UNLICENSED",
   "description": "StoryForge AI internal MVP for faceless YouTube creation.",
   "dependencies": {
+    "@bull-board/api": "^6.20.3",
+    "@bull-board/express": "^6.20.3",
     "@prisma/client": "^6.19.2",
     "@tailwindcss/postcss": "^4.2.1",
     "@types/bcryptjs": "^2.4.6",

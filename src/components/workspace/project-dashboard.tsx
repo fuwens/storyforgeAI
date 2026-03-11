@@ -15,6 +15,25 @@ type ProjectDashboardProps = {
   initialProjects: Project[];
 };
 
+/** Deterministic gradient from project id hash */
+function projectGradient(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  }
+  const gradients = [
+    "from-indigo-900 to-slate-900",
+    "from-violet-900 to-slate-900",
+    "from-cyan-900 to-slate-900",
+    "from-emerald-900 to-slate-900",
+    "from-rose-900 to-slate-900",
+    "from-amber-900 to-slate-900",
+    "from-fuchsia-900 to-slate-900",
+    "from-teal-900 to-slate-900",
+  ];
+  return gradients[hash % gradients.length];
+}
+
 export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
   const router = useRouter();
   const [projects, setProjects] = useState(initialProjects);
@@ -23,6 +42,7 @@ export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const defaultPreset = useMemo(() => projectPresets[0], []);
   const t = useTranslations("dashboard");
+  const tShot = useTranslations("shotCard");
 
   async function handleCreateProject(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -165,39 +185,75 @@ export function ProjectDashboard({ initialProjects }: ProjectDashboardProps) {
               {t("noProjects")}
             </div>
           ) : (
-            projects.map((project) => (
-              <div key={project.id} className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm text-slate-500">{formatDate(project.updatedAt)}</p>
-                    <h3 className="mt-2 text-xl font-semibold text-white">{project.title}</h3>
-                    <p className="mt-2 text-sm leading-6 text-slate-300">{project.topic}</p>
+            projects.map((project) => {
+              // Find the first approved asset from the first shot (loaded by listProjects)
+              const coverAsset = project.shots[0]?.assets.find((a) => a.approved) ?? null;
+              const coverUrl = coverAsset ? (coverAsset.storageUrl ?? coverAsset.sourceUrl) : null;
+              const isCoverVideo = coverAsset?.mimeType.startsWith("video/") ?? false;
+              const isCoverImage = coverAsset?.mimeType.startsWith("image/") ?? false;
+              const gradient = projectGradient(project.id);
+
+              return (
+                <div key={project.id} className="rounded-3xl border border-white/10 bg-white/5 overflow-hidden">
+                  {/* Cover image area */}
+                  <div className={`h-[160px] w-full overflow-hidden bg-gradient-to-br ${gradient}`}>
+                    {coverUrl && isCoverImage ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={coverUrl}
+                        alt={tShot("coverAlt")}
+                        className="h-full w-full object-cover opacity-90"
+                      />
+                    ) : coverUrl && isCoverVideo ? (
+                      <video
+                        src={coverUrl}
+                        muted
+                        autoPlay
+                        loop
+                        playsInline
+                        className="h-full w-full object-cover opacity-90"
+                      />
+                    ) : (
+                      /* Gradient placeholder — no extra content needed */
+                      <div className="h-full w-full" />
+                    )}
                   </div>
-                  <StatusPill value={project.status} />
+
+                  {/* Card body */}
+                  <div className="p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-sm text-slate-500">{formatDate(project.updatedAt)}</p>
+                        <h3 className="mt-2 text-xl font-semibold text-white">{project.title}</h3>
+                        <p className="mt-2 text-sm leading-6 text-slate-300">{project.topic}</p>
+                      </div>
+                      <StatusPill value={project.status} />
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {project.styleTags.map((tag) => (
+                        <span key={tag} className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="mt-5 flex flex-wrap gap-3">
+                      <Link href={`/projects/${project.id}`} className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950">
+                        {t("open")}
+                      </Link>
+                      <button className="rounded-full border border-white/10 px-4 py-2 text-sm text-white cursor-pointer" onClick={() => handleDuplicate(project.id)}>
+                        {t("duplicate")}
+                      </button>
+                      <button
+                        className="rounded-full border border-red-500/30 px-4 py-2 text-sm text-red-400 transition hover:bg-red-500/10 cursor-pointer"
+                        onClick={() => setDeleteTarget({ id: project.id, title: project.title })}
+                      >
+                        {t("delete")}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {project.styleTags.map((tag) => (
-                    <span key={tag} className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <Link href={`/projects/${project.id}`} className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950">
-                    {t("open")}
-                  </Link>
-                  <button className="rounded-full border border-white/10 px-4 py-2 text-sm text-white cursor-pointer" onClick={() => handleDuplicate(project.id)}>
-                    {t("duplicate")}
-                  </button>
-                  <button
-                    className="rounded-full border border-red-500/30 px-4 py-2 text-sm text-red-400 transition hover:bg-red-500/10 cursor-pointer"
-                    onClick={() => setDeleteTarget({ id: project.id, title: project.title })}
-                  >
-                    {t("delete")}
-                  </button>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </section>

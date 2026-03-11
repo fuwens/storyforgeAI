@@ -136,7 +136,9 @@
     "approve": "确认使用",
     "taskFailed": "任务失败",
     "retrying": "重试中...",
-    "retry": "重试"
+    "retry": "重试",
+    "noAsset": "暂无素材",
+    "coverAlt": "项目封面"
   },
   "stepNav": {
     "step1": "1. 主题",
