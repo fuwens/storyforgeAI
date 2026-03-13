@@ -205,54 +205,66 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
       setLoadingAction(null);
       return;
     }
-    const payload = await response.json();
 
-    if (format === "zip") {
-      if (payload.downloadUrl && !payload.jobId) {
-        setLoadingAction(null);
-        const downloadUrl = `/api/jobs/${payload.jobId || "unknown"}/download`;
-        setExportLinks((current) => ({ ...current, zip: downloadUrl }));
-        window.open(downloadUrl, "_blank");
-        return;
-      }
-
-      if (!payload.jobId) { setLoadingAction(null); return; }
-
-      const jobId = payload.jobId as string;
-      const storageKey = `zip-job-${project.id}`;
-      localStorage.setItem(storageKey, jobId);
-
-      const poll = setInterval(async () => {
-        try {
-          const jobRes = await fetch(`/api/jobs/${jobId}`);
-          if (!jobRes.ok) return;
-          const job = await jobRes.json();
-          if (job.status === "completed" && job.result?.filePath) {
-            clearInterval(poll);
-            setLoadingAction(null);
-            localStorage.removeItem(storageKey);
-            const downloadUrl = `/api/jobs/${jobId}/download`;
-            setExportLinks((current) => ({ ...current, zip: downloadUrl }));
-            window.open(downloadUrl, "_blank");
-            await refreshProject(false);
-          } else if (job.status === "failed") {
-            clearInterval(poll);
-            setLoadingAction(null);
-            localStorage.removeItem(storageKey);
-            alert(`${t("exportFailed")}: ${job.error || t("unknownError")}`);
-          }
-        } catch {
-          // ignore transient fetch errors
-        }
-      }, 3000);
+    // CSV / TXT — server returns file directly
+    if (format === "csv" || format === "txt") {
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = format === "csv" ? `${project.id}-shots.csv` : `${project.id}-script.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setLoadingAction(null);
       return;
     }
 
-    setLoadingAction(null);
-    if (payload.downloadUrl) {
-      setProject(payload.project as Project);
-      setExportLinks((current) => ({ ...current, [format]: payload.downloadUrl as string }));
+    // ZIP — check content type: if server returned file directly (cache hit), download it
+    const contentType = response.headers.get("Content-Type") || "";
+    if (contentType.includes("application/zip")) {
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${project.id}-assets.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setLoadingAction(null);
+      return;
     }
+
+    // ZIP — async job
+    const payload = await response.json();
+    if (!payload.jobId) { setLoadingAction(null); return; }
+
+    const jobId = payload.jobId as string;
+    const storageKey = `zip-job-${project.id}`;
+    localStorage.setItem(storageKey, jobId);
+
+    const poll = setInterval(async () => {
+      try {
+        const jobRes = await fetch(`/api/jobs/${jobId}`);
+        if (!jobRes.ok) return;
+        const job = await jobRes.json();
+        if (job.status === "completed" && job.result?.filePath) {
+          clearInterval(poll);
+          setLoadingAction(null);
+          localStorage.removeItem(storageKey);
+          const downloadUrl = `/api/jobs/${jobId}/download`;
+          setExportLinks((current) => ({ ...current, zip: downloadUrl }));
+          window.open(downloadUrl, "_blank");
+          await refreshProject(false);
+        } else if (job.status === "failed") {
+          clearInterval(poll);
+          setLoadingAction(null);
+          localStorage.removeItem(storageKey);
+          alert(`${t("exportFailed")}: ${job.error || t("unknownError")}`);
+        }
+      } catch {
+        // ignore transient fetch errors
+      }
+    }, 3000);
+    void poll;
   }
 
   const TOTAL_STEPS = 7;

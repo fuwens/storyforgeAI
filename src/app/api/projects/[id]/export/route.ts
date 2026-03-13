@@ -61,8 +61,15 @@ export async function POST(
   const zipPath = path.join(process.cwd(), "public", "generated", fileName);
   try {
     await fs.access(zipPath);
-    // File exists — content unchanged, return cached download URL
-    return NextResponse.json({ downloadUrl: `/generated/${fileName}` });
+    // File exists — stream directly
+    const buffer = await fs.readFile(zipPath);
+    return new NextResponse(buffer, {
+      headers: {
+        "Content-Type": "application/zip",
+        "Content-Disposition": `attachment; filename="${fileName}"`,
+        "Content-Length": buffer.length.toString(),
+      },
+    });
   } catch {
     // File doesn't exist — need to build
   }
