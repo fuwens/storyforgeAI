@@ -13,11 +13,11 @@ export async function GET(
   }
 
   // If job is completed and has a file, stream it directly
-  if (job.status === "completed" && job.result?.filePath) {
+  if (job.status === "completed" && (job.result as any)?.filePath) {
     try {
       const fs = await import("node:fs/promises");
-      const buffer = await fs.readFile(job.result.filePath);
-      const fileName = job.result.filePath.split("/").pop() || "export.zip";
+      const buffer = await fs.readFile((job.result as any).filePath);
+      const fileName = ((job.result as any).filePath as string).split("/").pop() || "export.zip";
 
       return new NextResponse(buffer, {
         headers: {
