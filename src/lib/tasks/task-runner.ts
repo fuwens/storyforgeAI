@@ -62,6 +62,9 @@ export async function retryTask(taskId: string) {
 }
 
 async function syncTask(task: GenerationTask) {
+  // 已完成或失败的任务不需要再 sync
+  if (task.status === "completed" || task.status === "failed") return;
+
   if (task.provider === "mock") {
     await syncMockTask(task);
     return;
