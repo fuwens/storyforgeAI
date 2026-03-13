@@ -13,7 +13,7 @@ export async function exportZipProcessor(data: {
   projectId: string;
   fileName: string;
   shotIds?: string[];
-}): Promise<{ downloadUrl: string }> {
+}): Promise<{ filePath: string }> {
   const { projectId, fileName, shotIds } = data;
   const project = await getProject(projectId);
   if (!project) throw new Error("Project not found");
@@ -27,9 +27,10 @@ export async function exportZipProcessor(data: {
 
   const outputDir = path.join(process.cwd(), "public", "generated");
   await fs.mkdir(outputDir, { recursive: true });
-  await fs.writeFile(path.join(outputDir, fileName), buffer);
+  const filePath = path.join(outputDir, fileName);
+  await fs.writeFile(filePath, buffer);
 
-  return { downloadUrl: `/generated/${fileName}` };
+  return { filePath };
 }
 
 /* ---------- helpers ---------- */

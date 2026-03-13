@@ -27,7 +27,7 @@ export async function POST(
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  // CSV and TXT are lightweight — keep synchronous
+  // CSV and TXT are lightweight — keep synchronous, return directly (not file)
   if (format === "csv" || format === "txt") {
     const { buildCsv, buildTxt } = await import("@/lib/queue/processors/export-helpers");
     const fileName = format === "csv"
@@ -42,26 +42,14 @@ export async function POST(
     const content = format === "csv" ? buildCsv(filteredProject) : buildTxt(filteredProject);
     const buffer = Buffer.from(content, "utf8");
 
-    const fs = await import("node:fs/promises");
-    const path = await import("node:path");
-    const outputDir = path.join(process.cwd(), "public", "generated");
-    await fs.mkdir(outputDir, { recursive: true });
-    await fs.writeFile(path.join(outputDir, fileName), buffer);
-
-    const downloadUrl = `/generated/${fileName}`;
-    const now = new Date().toISOString();
-    const exportJob: ExportJob = {
-      id: uid("export"),
-      projectId: project.id,
-      format,
-      downloadUrl,
-      createdAt: now,
-      updatedAt: now,
-    };
-    await addExport(project.id, exportJob);
-
-    const refreshed = await getProject(project.id, session.userId);
-    return NextResponse.json({ downloadUrl, project: refreshed });
+    // Return directly with proper headers (don't save to file)
+    return new NextResponse(buffer, {
+      headers: {
+        "Content-Type": format === "csv" ? "text/csv;charset=utf-8" : "text/plain;charset=utf-8",
+        "Content-Disposition": `attachment; filename="${fileName}"`,
+        "Content-Length": buffer.length.toString(),
+      },
+    });
   }
 
   // ZIP → async via BullMQ

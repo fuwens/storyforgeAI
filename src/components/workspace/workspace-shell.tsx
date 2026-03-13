@@ -174,12 +174,13 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
         const jobRes = await fetch(`/api/jobs/${savedJobId}`);
         if (!jobRes.ok) { clearInterval(poll); setLoadingAction(null); localStorage.removeItem(storageKey); return; }
         const job = await jobRes.json();
-        if (job.status === "completed" && job.result?.downloadUrl) {
+        if (job.status === "completed" && job.result?.filePath) {
           clearInterval(poll);
           setLoadingAction(null);
           localStorage.removeItem(storageKey);
-          setExportLinks((current) => ({ ...current, zip: job.result.downloadUrl as string }));
-          window.open(job.result.downloadUrl as string, "_blank");
+          const downloadUrl = `/api/jobs/${savedJobId}/download`;
+          setExportLinks((current) => ({ ...current, zip: downloadUrl }));
+          window.open(downloadUrl, "_blank");
           await refreshProject(false);
         } else if (job.status === "failed") {
           clearInterval(poll);
@@ -209,8 +210,9 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
     if (format === "zip") {
       if (payload.downloadUrl && !payload.jobId) {
         setLoadingAction(null);
-        setExportLinks((current) => ({ ...current, zip: payload.downloadUrl as string }));
-        window.open(payload.downloadUrl as string, "_blank");
+        const downloadUrl = `/api/jobs/${payload.jobId || "unknown"}/download`;
+        setExportLinks((current) => ({ ...current, zip: downloadUrl }));
+        window.open(downloadUrl, "_blank");
         return;
       }
 
@@ -225,12 +227,13 @@ export function WorkspaceShell({ initialProject }: WorkspaceShellProps) {
           const jobRes = await fetch(`/api/jobs/${jobId}`);
           if (!jobRes.ok) return;
           const job = await jobRes.json();
-          if (job.status === "completed" && job.result?.downloadUrl) {
+          if (job.status === "completed" && job.result?.filePath) {
             clearInterval(poll);
             setLoadingAction(null);
             localStorage.removeItem(storageKey);
-            setExportLinks((current) => ({ ...current, zip: job.result.downloadUrl as string }));
-            window.open(job.result.downloadUrl as string, "_blank");
+            const downloadUrl = `/api/jobs/${jobId}/download`;
+            setExportLinks((current) => ({ ...current, zip: downloadUrl }));
+            window.open(downloadUrl, "_blank");
             await refreshProject(false);
           } else if (job.status === "failed") {
             clearInterval(poll);
